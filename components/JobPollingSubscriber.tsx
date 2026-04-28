@@ -22,8 +22,8 @@ export function JobPollingSubscriber({ jobId, taskId, prompt, family }: Props) {
     taskId,
     family,
     enabled: true,
-    intervalMs: 3000,
-    maxAttempts: 60,
+    intervalMs: 5000,
+    maxAttempts: 240,
     onSuccess: (res) => {
       updateJob(jobId, {
         status: "succeeded",

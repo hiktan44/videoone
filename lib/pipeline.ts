@@ -53,9 +53,9 @@ export type PipelineOptions = {
 
 // --- Sabitler ---
 
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLL_ATTEMPTS = 60; // 60 * 3 sn = 3 dk
-const SCENE_TIMEOUT_BUFFER_MS = 60_000; // ekstra 60 sn buffer
+const POLL_INTERVAL_MS = 5000;
+const MAX_POLL_ATTEMPTS = 240; // 240 * 5 sn = 20 dk (video uretimi 5-15 dk surebilir)
+const SCENE_TIMEOUT_BUFFER_MS = 120_000; // ekstra 2 dk buffer
 const DEFAULT_ASPECT_RATIO = "16:9";
 
 // Sahneye atanacak rasgele gradient havuzu (Tailwind sinifi olarak).
