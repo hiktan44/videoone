@@ -5,10 +5,10 @@ import {
 
 export const runtime = "nodejs";
 
-// Kie Gemini endpoint URL'inde model adi yer alir.
-// docs.kie.ai: POST https://api.kie.ai/gemini-2.5-pro/v1/chat/completions
-const KIE_BASE = "https://api.kie.ai";
-const GEMINI_PATH = "/gemini-2.5-pro/v1/chat/completions";
+// OpenAI ChatGPT (gpt-5 / gpt-5.5) ile senaryo uretimi.
+// Endpoint: https://api.openai.com/v1/chat/completions
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5";
 
 const SYSTEM_PROMPT = `You are a professional cinematic storyboard writer for short-form AI video. The user gives you a topic in Turkish and a target total duration. You MUST analyze the topic deeply and design a connected, emotionally engaging multi-scene storyboard. NEVER simply repeat or copy the user's topic into each scene — instead break it into a narrative arc.
 
@@ -69,8 +69,8 @@ function clampDuration(d: number, max: number): number {
   return Math.max(3, Math.min(max, Math.round(d)));
 }
 
-async function callGemini(input: GenInput): Promise<{ scenes?: Scene[]; error?: string }> {
-  if (!process.env.KIE_API_KEY) return { error: "KIE_API_KEY tanımlı değil" };
+async function callOpenAI(input: GenInput): Promise<{ scenes?: Scene[]; error?: string }> {
+  if (!process.env.OPENAI_API_KEY) return { error: "OPENAI_API_KEY tanımlı değil" };
   try {
     const userPrompt = `Topic (in Turkish): ${input.topic}
 Target total duration: ${input.totalDurationSec} seconds
@@ -81,6 +81,7 @@ Title language: ${input.language || "Türkçe"}
 Design the storyboard now. Return JSON only.`;
 
     const body = {
+      model: OPENAI_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
@@ -117,10 +118,10 @@ Design the storyboard now. Return JSON only.`;
       },
     };
 
-    const res = await fetch(`${KIE_BASE}${GEMINI_PATH}`, {
+    const res = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.KIE_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -128,29 +129,26 @@ Design the storyboard now. Return JSON only.`;
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      return { error: `Gemini HTTP ${res.status}: ${txt.slice(0, 200)}` };
+      return { error: `OpenAI HTTP ${res.status}: ${txt.slice(0, 200)}` };
     }
 
     const data = await res.json();
-    const content: string =
-      data?.choices?.[0]?.message?.content ||
-      data?.data?.choices?.[0]?.message?.content ||
-      "";
+    const content: string = data?.choices?.[0]?.message?.content || "";
 
-    if (!content) return { error: "Gemini boş yanıt döndü" };
+    if (!content) return { error: "OpenAI boş yanıt döndü" };
 
     let parsed: any;
     try {
       parsed = JSON.parse(content);
     } catch {
       const m = content.match(/\{[\s\S]*\}/);
-      if (!m) return { error: "Gemini yanıtı JSON değil: " + content.slice(0, 200) };
+      if (!m) return { error: "OpenAI yanıtı JSON değil: " + content.slice(0, 200) };
       try { parsed = JSON.parse(m[0]); }
       catch (e) { return { error: "JSON parse hatası: " + (e as Error).message }; }
     }
 
     const scenesRaw = Array.isArray(parsed?.scenes) ? parsed.scenes : [];
-    if (scenesRaw.length === 0) return { error: "Gemini hiç sahne döndürmedi" };
+    if (scenesRaw.length === 0) return { error: "OpenAI hiç sahne döndürmedi" };
 
     const now = Date.now();
     const scenes: Scene[] = scenesRaw.map((s: any, i: number) => ({
@@ -167,11 +165,11 @@ Design the storyboard now. Return JSON only.`;
     }));
     return { scenes };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Gemini isteği başarısız" };
+    return { error: e instanceof Error ? e.message : "OpenAI isteği başarısız" };
   }
 }
 
-// Eger Gemini calismazsa: Akilli fallback. Konuyu analiz et, narrative arc uygula.
+// Eger OpenAI calismazsa: Akilli fallback. Konuyu analiz et, narrative arc uygula.
 function smartFallback(topic: string, totalSec: number, perSceneMax: number): Scene[] {
   const sceneCount = Math.max(3, Math.min(20, Math.ceil(totalSec / perSceneMax)));
   const baseDuration = Math.max(3, Math.min(perSceneMax, Math.round(totalSec / sceneCount)));
@@ -271,8 +269,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "totalDurationSec 10-600 arasında olmalı." }, { status: 400 });
   }
 
-  // 1) Gemini ile dene
-  const ai = await callGemini({ topic, totalDurationSec, modelDisplayName, perSceneMaxSec, language, globalStyle });
+  // 1) OpenAI (ChatGPT) ile dene
+  const ai = await callOpenAI({ topic, totalDurationSec, modelDisplayName, perSceneMaxSec, language, globalStyle });
 
   let storyboard: Storyboard;
   let source: "ai" | "fallback" = "fallback";
