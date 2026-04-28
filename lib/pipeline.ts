@@ -48,6 +48,9 @@ export type PipelineHandle = {
 
 export type PipelineOptions = {
   aspectRatio?: string;
+  // Aynı anda kac sahne paralel uretilsin (varsayilan 4).
+  // Kie.ai rate-limit'ine takilmamak icin 1-8 arasi tutulmali.
+  concurrency?: number;
   onProgress?: (state: PipelineState, currentScene?: Scene) => void;
 };
 
@@ -189,6 +192,7 @@ export function runStoryboardPipeline(
   options: PipelineOptions = {}
 ): PipelineHandle {
   const aspectRatio = options.aspectRatio || DEFAULT_ASPECT_RATIO;
+  const concurrency = Math.max(1, Math.min(8, options.concurrency ?? 4));
   const controller = new AbortController();
   const signal = controller.signal;
 
@@ -230,45 +234,55 @@ export function runStoryboardPipeline(
     updateJobProgress(`Pipeline baslatildi (${storyboard.scenes.length} sahne)`);
 
     try {
-      for (let i = 0; i < storyboard.scenes.length; i++) {
-        if (signal.aborted) break;
+      // Paralel worker pool: aynı anda `concurrency` sahne uretilir.
+      // Sahneler tamamlandikca timeline'a sirayla (sceneIndex sirasinda) eklenir.
+      let nextIndex = 0;
+      const totalScenes = storyboard.scenes.length;
 
-        const scene = storyboard.scenes[i];
-        const prev = i > 0 ? storyboard.scenes[i - 1] : undefined;
-        state.currentSceneIndex = i;
+      const runWorker = async () => {
+        while (!signal.aborted) {
+          const i = nextIndex++;
+          if (i >= totalScenes) return;
 
-        emit({ phase: "scene-started", sceneIndex: i, sceneId: scene.id }, scene);
+          const scene = storyboard.scenes[i];
+          const prev = i > 0 ? storyboard.scenes[i - 1] : undefined;
+          state.currentSceneIndex = i;
 
-        let result: SceneResult;
-        try {
-          result = await generateScene(scene, prev, storyboard, aspectRatio, signal);
-        } catch (err) {
-          if ((err as { name?: string })?.name === "AbortError") break;
-          result = { ok: false, error: (err as Error).message || "Bilinmeyen hata" };
-        }
+          emit({ phase: "scene-started", sceneIndex: i, sceneId: scene.id }, scene);
 
-        if (signal.aborted) break;
-
-        if (result.ok) {
-          // Timeline'a klip ekle.
+          let result: SceneResult;
           try {
-            useStore.getState().addClip({
-              trackId: "video",
-              label: scene.title,
-              duration: scene.durationSec,
-              sourceUrl: result.resultUrl,
-              gradient: pickGradient(i + scene.index),
-            });
-          } catch {
-            // Store hatasi pipeline'i durdurmasin.
+            result = await generateScene(scene, prev, storyboard, aspectRatio, signal);
+          } catch (err) {
+            if ((err as { name?: string })?.name === "AbortError") return;
+            result = { ok: false, error: (err as Error).message || "Bilinmeyen hata" };
           }
-          state.scenesCompleted.push({ sceneId: scene.id, resultUrl: result.resultUrl });
-          emit({ phase: "scene-completed", sceneIndex: i, sceneId: scene.id }, scene);
-        } else {
-          state.scenesFailed.push({ sceneId: scene.id, error: result.error });
-          emit({ phase: "scene-failed", sceneIndex: i, sceneId: scene.id, error: result.error }, scene);
+
+          if (signal.aborted) return;
+
+          if (result.ok) {
+            try {
+              useStore.getState().addClip({
+                trackId: "video",
+                label: scene.title,
+                duration: scene.durationSec,
+                sourceUrl: result.resultUrl,
+                gradient: pickGradient(i + scene.index),
+              });
+            } catch {
+              // Store hatasi pipeline'i durdurmasin.
+            }
+            state.scenesCompleted.push({ sceneId: scene.id, resultUrl: result.resultUrl });
+            emit({ phase: "scene-completed", sceneIndex: i, sceneId: scene.id }, scene);
+          } else {
+            state.scenesFailed.push({ sceneId: scene.id, error: result.error });
+            emit({ phase: "scene-failed", sceneIndex: i, sceneId: scene.id, error: result.error }, scene);
+          }
         }
-      }
+      };
+
+      const workers = Array.from({ length: Math.min(concurrency, totalScenes) }, () => runWorker());
+      await Promise.all(workers);
 
       if (signal.aborted) {
         state.status = "cancelled";
@@ -313,4 +327,19 @@ export function runStoryboardPipeline(
     },
     promise,
   };
+}
+
+// Tek bir sahneyi yeniden uret. UI'da "Yeniden Uret" butonu icin.
+// resultUrl bittiginde Promise resolve eder. Hata durumunda { ok:false } doner.
+export async function regenerateScene(
+  storyboard: Storyboard,
+  sceneIndex: number,
+  options: { aspectRatio?: string } = {}
+): Promise<SceneResult> {
+  const aspectRatio = options.aspectRatio || DEFAULT_ASPECT_RATIO;
+  const controller = new AbortController();
+  const scene = storyboard.scenes[sceneIndex];
+  if (!scene) return { ok: false, error: "Sahne bulunamadi" };
+  const prev = sceneIndex > 0 ? storyboard.scenes[sceneIndex - 1] : undefined;
+  return generateScene(scene, prev, storyboard, aspectRatio, controller.signal);
 }

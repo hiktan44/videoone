@@ -166,7 +166,8 @@ function checkKieCode(data: any): { ok: boolean; message?: string } {
 }
 
 async function kieFetch(url: string, init: RequestInit, retry = true): Promise<any> {
-  const res = await fetch(url, init);
+  // Next.js fetch'i default olarak cache yapar - poll endpoint icin devre disi birak
+  const res = await fetch(url, { ...init, cache: "no-store" });
   if (!res.ok) {
     if (retry && (res.status === 429 || res.status >= 500)) {
       await new Promise((r) => setTimeout(r, 1500));
