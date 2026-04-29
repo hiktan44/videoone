@@ -789,6 +789,39 @@ function Step3Progress(props: {
   onClose: () => void;
 }) {
   const { pipelineState, storyboard, onCancel, onClose } = props;
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
+
+  const handleRegenerate = async (sceneId: string) => {
+    if (!storyboard) return;
+    const sceneIndex = storyboard.scenes.findIndex((s) => s.id === sceneId);
+    if (sceneIndex < 0) return;
+    setRegenerating((prev) => new Set(prev).add(sceneId));
+    try {
+      const { regenerateScene } = await import("@/lib/pipeline");
+      const result = await regenerateScene(storyboard, sceneIndex);
+      if (result.ok) {
+        const { useStore } = await import("@/lib/store");
+        const scene = storyboard.scenes[sceneIndex];
+        useStore.getState().addClip({
+          trackId: "video",
+          label: scene.title + " (yeniden)",
+          duration: scene.durationSec,
+          sourceUrl: result.resultUrl,
+          gradient: "from-purple-500 to-pink-500",
+        });
+      } else {
+        alert("Yeniden üretim başarısız: " + result.error);
+      }
+    } catch (e) {
+      alert("Yeniden üretim hatası: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setRegenerating((prev) => {
+        const next = new Set(prev);
+        next.delete(sceneId);
+        return next;
+      });
+    }
+  };
 
   const total = pipelineState?.total ?? storyboard?.scenes.length ?? 0;
   const completed = pipelineState?.completed ?? 0;
@@ -895,6 +928,23 @@ function Step3Progress(props: {
               <span className="text-[10px] text-red-400 truncate max-w-[160px]" title={s.error}>
                 {s.error}
               </span>
+            ) : null}
+            {/* Yeniden uret butonu — tamamlanmis veya basarisiz sahneler icin */}
+            {(s.status === "done" || s.status === "failed") && storyboard ? (
+              <button
+                type="button"
+                onClick={() => handleRegenerate(s.sceneId)}
+                disabled={regenerating.has(s.sceneId)}
+                title="Bu sahneyi yeniden uret"
+                className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] border border-zinc-700 text-zinc-300 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-wait"
+              >
+                {regenerating.has(s.sceneId) ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Yeniden
+              </button>
             ) : null}
           </div>
         ))}

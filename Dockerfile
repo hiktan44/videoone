@@ -2,13 +2,16 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# devDependencies (typescript, tailwind) build icin gerekli — NODE_ENV=production set edilse bile yukle
+RUN npm ci --include=dev
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build sirasinda NODE_ENV'i development zorla — Coolify'in NODE_ENV=production buildtime'i devDeps'i atliyor
+ENV NODE_ENV=development
 RUN npm run build
 
 FROM node:20-alpine AS runner
