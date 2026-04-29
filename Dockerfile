@@ -10,8 +10,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Build sirasinda NODE_ENV'i development zorla — Coolify'in NODE_ENV=production buildtime'i devDeps'i atliyor
-ENV NODE_ENV=development
+# Coolify NODE_ENV=production buildtime'da gonderirse: yukari deps'te --include=dev ile devDeps zorlandi
+# Build sirasinda NODE_ENV'i NEXT_PUBLIC olmayan production'a tut
+ENV NODE_ENV=production
 RUN npm run build
 
 FROM node:20-alpine AS runner
