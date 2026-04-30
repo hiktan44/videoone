@@ -104,12 +104,6 @@ export default function HomePage() {
               İyi akşamlar, <span className="text-gradient">Hikmet</span>
             </h1>
 
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3.5 py-1.5 text-xs text-amber-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              Yeni: Kie.ai entegrasyonu 2.0!
-              <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-
             <HeroPrompt />
 
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
