@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Sparkles, ExternalLink, FilmIcon } from "lucide-react";
 import clsx from "clsx";
 import { useStore, type GenerationJob } from "@/lib/store";
 import { JobPollingSubscriber } from "./JobPollingSubscriber";
+import { makeSampleProject, type TimelineClip } from "@/lib/mocks";
+import { upsertProject } from "@/lib/persistence";
 
 function kindLabel(kind: GenerationJob["kind"]): string {
   if (kind === "video") return "Video";
@@ -36,7 +39,26 @@ function shortenPrompt(p: string, max = 56): string {
 
 export function GenerationPanel() {
   const jobs = useStore((s) => s.jobs);
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+
+  const openInEditor = (job: GenerationJob) => {
+    if (!job.resultUrl) return;
+    // Yeni proje olustur, uretilen sonucu timeline'a klip olarak ekle
+    const project = makeSampleProject(job.prompt.slice(0, 40) || "Yeni Üretim");
+    const clip: TimelineClip = {
+      id: `clip-${Date.now()}`,
+      trackId: "video",
+      label: job.prompt.slice(0, 24) || "Üretilen klip",
+      startTime: 0,
+      duration: 5,
+      sourceUrl: job.resultUrl,
+      gradient: "from-purple-500 to-pink-500",
+    };
+    project.clips = [clip];
+    upsertProject(project);
+    router.push(`/editor/${project.id}`);
+  };
 
   // İzlenen aktif job'lar için polling — panel mount olduğu sürece çalışır.
   const pollingJobs = jobs.filter(
@@ -64,6 +86,7 @@ export function GenerationPanel() {
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
+          title={collapsed ? "Paneli aç" : "Paneli daralt (silmez)"}
           className="w-full flex items-center justify-between px-3 py-2 border-b border-zinc-900 hover:bg-zinc-900/60 transition-colors"
         >
           <div className="flex items-center gap-2">
@@ -115,14 +138,25 @@ export function GenerationPanel() {
                     </div>
                   )}
                   {job.status === "succeeded" && job.resultUrl && (
-                    <a
-                      href={job.resultUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-0.5 text-[11px] text-purple-300 hover:text-purple-200 truncate block"
-                    >
-                      Sonucu aç →
-                    </a>
+                    <div className="mt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openInEditor(job)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-gradient-vibe rounded px-2 py-0.5 hover:opacity-90"
+                      >
+                        <FilmIcon className="h-3 w-3" />
+                        Editörde Aç
+                      </button>
+                      <a
+                        href={job.resultUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-purple-300 hover:text-purple-200"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Aç
+                      </a>
+                    </div>
                   )}
                 </div>
               </li>

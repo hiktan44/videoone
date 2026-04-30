@@ -15,19 +15,63 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 
-const mainItems = [
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  href?: string;
+  disabled?: boolean;
+};
+
+const mainItems: NavItem[] = [
   { icon: Home, label: "Ana Sayfa", href: "/" },
-  { icon: Folder, label: "Projeler", href: "/" },
-  { icon: Star, label: "Yıldızlananlar", href: "/" },
-  { icon: Share2, label: "Paylaşılanlar", href: "/" },
+  { icon: Folder, label: "Projeler", disabled: true },
+  { icon: Star, label: "Yıldızlananlar", disabled: true },
+  { icon: Share2, label: "Paylaşılanlar", disabled: true },
 ];
 
-const resourceItems = [
-  { icon: Layout, label: "Şablonlar", href: "/" },
-  { icon: Tv, label: "Kanal", href: "/" },
-  { icon: Globe, label: "Yayınlanan Şablonlar", href: "/" },
-  { icon: HelpCircle, label: "Destek", href: "/" },
+const resourceItems: NavItem[] = [
+  { icon: Layout, label: "Şablonlar", disabled: true },
+  { icon: Tv, label: "Kanal", disabled: true },
+  { icon: Globe, label: "Yayınlanan Şablonlar", disabled: true },
+  { icon: HelpCircle, label: "Destek", disabled: true },
 ];
+
+function NavRow({ item, active }: { item: NavItem; active?: boolean }) {
+  const base = "flex items-center gap-3 rounded-lg px-3 py-2 text-sm w-full";
+  if (item.disabled) {
+    return (
+      <button
+        type="button"
+        title="Yakında"
+        disabled
+        className={clsx(
+          base,
+          "text-zinc-600 cursor-not-allowed opacity-60 hover:bg-transparent"
+        )}
+      >
+        <item.icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{item.label}</span>
+        <span className="text-[9px] uppercase tracking-wide text-zinc-600">
+          yakında
+        </span>
+      </button>
+    );
+  }
+  return (
+    <Link
+      href={item.href || "/"}
+      className={clsx(
+        base,
+        active
+          ? "bg-zinc-900 text-white"
+          : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
+      )}
+    >
+      <item.icon className="h-4 w-4" />
+      {item.label}
+    </Link>
+  );
+}
 
 export function Sidebar() {
   return (
@@ -42,18 +86,7 @@ export function Sidebar() {
         <ul className="space-y-1">
           {mainItems.map((it, i) => (
             <li key={it.label + i}>
-              <Link
-                href={it.href}
-                className={clsx(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm",
-                  i === 0
-                    ? "bg-zinc-900 text-white"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
-                )}
-              >
-                <it.icon className="h-4 w-4" />
-                {it.label}
-              </Link>
+              <NavRow item={it} active={i === 0} />
             </li>
           ))}
         </ul>
@@ -64,25 +97,29 @@ export function Sidebar() {
         <ul className="mt-2 space-y-1">
           {resourceItems.map((it) => (
             <li key={it.label}>
-              <Link
-                href={it.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-900/60"
-              >
-                <it.icon className="h-4 w-4" />
-                {it.label}
-              </Link>
+              <NavRow item={it} />
             </li>
           ))}
         </ul>
       </nav>
 
       <div className="px-3 pb-5 space-y-3">
-        <button className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-900/60">
+        <button
+          type="button"
+          title="Yakında"
+          disabled
+          className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-600 opacity-60 cursor-not-allowed"
+        >
           <UserPlus className="h-4 w-4" />
           Arkadaşını davet et
         </button>
 
-        <button className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white bg-gradient-vibe shadow-lg shadow-purple-500/20">
+        <button
+          type="button"
+          title="Yakında"
+          disabled
+          className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white bg-gradient-vibe shadow-lg shadow-purple-500/20 opacity-70 cursor-not-allowed"
+        >
           <Sparkles className="h-4 w-4" />
           Pro&apos;ya Yükselt
         </button>
