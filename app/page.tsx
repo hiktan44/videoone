@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { Sidebar } from "@/components/Sidebar";
 import { HeroPrompt } from "@/components/HeroPrompt";
 import { ProjectCard } from "@/components/ProjectCard";
 import { GenerationPanel } from "@/components/GenerationPanel";
+import { Landing } from "@/components/Landing";
 import { useStore } from "@/lib/store";
 import {
   seedIfEmpty,
@@ -44,10 +46,16 @@ const tiers = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
   const projects = useStore((s) => s.projects);
   const setProjects = useStore((s) => s.setProjects);
   const [activeTab, setActiveTab] = useState<"recent" | "templates">("recent");
   const [mounted, setMounted] = useState(false);
+
+  // Login degilse landing page goster
+  if (isLoaded && !isSignedIn) {
+    return <Landing />;
+  }
 
   const refreshProjects = useCallback(() => {
     const list = withDisplayLabels(loadAllProjects());
