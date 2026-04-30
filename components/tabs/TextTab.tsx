@@ -1,10 +1,13 @@
 "use client";
 
 import { Type, AlignLeft } from "lucide-react";
+import { AlphaBanner } from "../AlphaBanner";
 
 export function TextTab() {
   return (
-    <div className="p-3 space-y-3">
+    <div>
+      <AlphaBanner text="Alpha: Metin overlay henüz timeline'a uygulanmıyor — Faz 3C ile aktif olacak." />
+      <div className="p-3 space-y-3">
       <p className="text-[12px] text-zinc-400">
         Videoya başlık veya gövde metni ekleyin.
       </p>
@@ -26,6 +29,7 @@ export function TextTab() {
           Açıklama ve detay metni
         </div>
       </button>
+      </div>
     </div>
   );
 }

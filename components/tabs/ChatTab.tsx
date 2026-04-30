@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { Plus, Paperclip, ArrowUp, Sparkles } from "lucide-react";
+import { Plus, Paperclip, ArrowUp, Sparkles, AlertTriangle } from "lucide-react";
 import clsx from "clsx";
 
 const quickActions = [
@@ -33,6 +33,12 @@ export function ChatTab() {
 
   return (
     <div className="flex flex-col h-full">
+      <div className="mx-3 mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 flex items-start gap-2">
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-400 mt-0.5 shrink-0" />
+        <div className="text-[11px] leading-snug text-amber-200/90">
+          <strong className="font-semibold">Alpha:</strong> Bu sohbet henüz canlı AI'a bağlı değil — komutlar gerçek üretim tetiklemiyor. Faz 2 ile birlikte tam çalışacak.
+        </div>
+      </div>
       <div className="px-3 pt-3 pb-2 flex items-center justify-between">
         <div className="text-sm font-semibold">Sohbet</div>
         <button

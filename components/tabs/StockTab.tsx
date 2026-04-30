@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import clsx from "clsx";
+import { AlphaBanner } from "../AlphaBanner";
 
 const tabs = ["Görseller", "Videolar", "Müzik"];
 const gradients = [
@@ -17,7 +18,9 @@ const gradients = [
 export function StockTab() {
   const [active, setActive] = useState(tabs[0]);
   return (
-    <div className="p-3 space-y-3 flex flex-col h-full">
+    <div className="flex flex-col h-full">
+      <AlphaBanner text="Alpha: Pexels arama henüz canlı API'ye bağlı değil. Faz 3A ile aktif olacak." />
+      <div className="p-3 space-y-3 flex flex-col flex-1 min-h-0">
       <div className="flex items-center gap-1 text-xs">
         {tabs.map((t) => (
           <button
@@ -62,6 +65,7 @@ export function StockTab() {
 
       <div className="text-[10px] text-zinc-500 text-center pt-1">
         Pexels tarafından desteklenmektedir
+      </div>
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { AlphaBanner } from "../AlphaBanner";
+
 const items = [
   "Sola Kaydır",
   "Sağa Kaydır",
@@ -15,7 +17,9 @@ const items = [
 
 export function TransitionsTab() {
   return (
-    <div className="p-3 space-y-3">
+    <div>
+      <AlphaBanner text="Alpha: Geçişler henüz timeline'a uygulanmıyor — Faz 3B ile aktif olacak." />
+      <div className="p-3 space-y-3">
       <p className="text-[12px] text-zinc-400">
         İki sahne arasına eklemek için bir geçiş seçin. Geçişler zaman çizelgesinde otomatik uygulanır.
       </p>
@@ -29,6 +33,7 @@ export function TransitionsTab() {
             {it}
           </button>
         ))}
+      </div>
       </div>
     </div>
   );
