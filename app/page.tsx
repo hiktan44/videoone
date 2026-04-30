@@ -30,14 +30,14 @@ const tiers = [
   },
   {
     icon: Trophy,
-    iconColor: "text-purple-400",
+    iconColor: "text-cyan-400",
     title: "Pro",
     desc: "~190 kredi/dk",
     sub: "Yüksek kalite, sosyal medya",
   },
   {
     icon: Sparkles,
-    iconColor: "text-pink-400",
+    iconColor: "text-coral-400",
     title: "Max",
     desc: "~600 kredi/dk",
     sub: "Sinematik kalite, müşteri sunumu",
@@ -92,7 +92,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-ink-950">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto scrollbar-thin">
@@ -100,11 +100,11 @@ export default function HomePage() {
           <div className="absolute inset-x-0 top-0 h-[420px] bg-gradient-hero pointer-events-none" />
 
           <div className="relative max-w-5xl mx-auto px-8 pt-16 pb-8">
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-ink-50">
               İyi akşamlar, <span className="text-gradient">Hikmet</span>
             </h1>
 
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-200">
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-3.5 py-1.5 text-xs text-amber-300">
               <Sparkles className="h-3.5 w-3.5" />
               Yeni: Kie.ai entegrasyonu 2.0!
               <ArrowRight className="h-3.5 w-3.5" />
@@ -117,30 +117,28 @@ export default function HomePage() {
                 <button
                   key={t.title}
                   type="button"
-                  className="text-left rounded-xl border border-zinc-800/80 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 p-4 transition-colors"
+                  className="text-left rounded-xl border border-ink-700 bg-ink-900/50 hover:bg-ink-900 hover:border-ink-600 p-4 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <t.icon className={clsx("h-4 w-4", t.iconColor)} />
-                    <div className="text-sm font-semibold text-white">
-                      {t.title}
-                    </div>
-                    <div className="text-[11px] text-zinc-400">{t.desc}</div>
+                    <div className="text-sm font-semibold text-ink-50">{t.title}</div>
+                    <div className="text-[11px] text-ink-400">{t.desc}</div>
                   </div>
-                  <div className="text-xs text-zinc-500 mt-1.5">{t.sub}</div>
+                  <div className="text-xs text-ink-400 mt-1.5">{t.sub}</div>
                 </button>
               ))}
             </div>
           </div>
 
           <div className="relative max-w-5xl mx-auto px-8 pb-16">
-            <div className="flex items-center gap-6 border-b border-zinc-900">
+            <div className="flex items-center gap-6 border-b border-ink-800">
               <button
                 onClick={() => setActiveTab("recent")}
                 className={clsx(
                   "py-3 text-sm font-medium border-b-2 -mb-px transition-colors",
                   activeTab === "recent"
-                    ? "text-white border-white"
-                    : "text-zinc-500 border-transparent hover:text-zinc-300"
+                    ? "text-amber-300 border-amber-500"
+                    : "text-ink-400 border-transparent hover:text-ink-200"
                 )}
               >
                 Son Projeler
@@ -150,8 +148,8 @@ export default function HomePage() {
                 className={clsx(
                   "py-3 text-sm font-medium border-b-2 -mb-px transition-colors",
                   activeTab === "templates"
-                    ? "text-white border-white"
-                    : "text-zinc-500 border-transparent hover:text-zinc-300"
+                    ? "text-amber-300 border-amber-500"
+                    : "text-ink-400 border-transparent hover:text-ink-200"
                 )}
               >
                 Genel Şablonlar
@@ -159,14 +157,14 @@ export default function HomePage() {
               <div className="flex-1" />
               <button
                 onClick={handleNewProject}
-                className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 bg-gradient-vibe text-white hover:opacity-90 transition-opacity"
+                className="text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-ink-950 transition-colors"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
                 Yeni Proje
               </button>
               <a
                 href="#"
-                className="text-xs text-zinc-400 hover:text-white inline-flex items-center gap-1"
+                className="text-xs text-ink-400 hover:text-ink-100 inline-flex items-center gap-1"
               >
                 Tüm projeleri gör
                 <ArrowRight className="h-3 w-3" />
@@ -175,8 +173,8 @@ export default function HomePage() {
 
             <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-4">
               {mounted && projects.length === 0 && (
-                <div className="col-span-full text-center py-12 text-zinc-500 text-sm">
-                  Henüz proje yok. Yukarıdaki <span className="text-zinc-300 font-medium">Yeni Proje</span> butonuyla başlayın.
+                <div className="col-span-full text-center py-12 text-ink-400 text-sm">
+                  Henüz proje yok. Yukarıdaki <span className="text-amber-300 font-medium">Yeni Proje</span> butonuyla başlayın.
                 </div>
               )}
               {projects.map((p: Project) => (
