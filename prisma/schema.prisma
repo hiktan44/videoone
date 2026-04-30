@@ -1,0 +1,260 @@
+// Vibe Studio veritabani semasi
+// Faz 1B: Multi-tenant SaaS temel modelleri.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =====================================================
+// USER & AUTH
+// =====================================================
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique
+  email         String   @unique
+  name          String?
+  imageUrl      String?
+  plan          String   @default("free") // free | pro | max
+  creditBalance Int      @default(100) // Yeni kullaniciya 100 kredi hosgeldin
+  role          String   @default("user") // user | admin
+  referralCode  String   @unique @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  projects      Project[]
+  jobs          GenerationJob[]
+  ledger        CreditLedger[]
+  subscriptions Subscription[]
+  assets        MediaAsset[]
+  channel       Channel?
+
+  // Referal ile gelmis kullanici
+  referredBy   Referral? @relation("Referee")
+  // Bu kullanicinin referal ettigi diger kullanicilar
+  referrals    Referral[] @relation("Referrer")
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+// =====================================================
+// PROJECT
+// =====================================================
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  gradient  String   @default("from-purple-500 via-pink-500 to-orange-400")
+  settings  Json     @default("{}")
+  isPublic  Boolean  @default(false)
+  thumbnailUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clips        Clip[]
+  characters   Character[]
+  chatMessages ChatMessage[]
+  mediaItems   MediaAsset[]
+  jobs         GenerationJob[]
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+// =====================================================
+// TIMELINE
+// =====================================================
+
+model Clip {
+  id              String  @id @default(cuid())
+  projectId       String
+  trackId         String  // "video" | "audio" | "subtitle" | "text"
+  label           String
+  startTime       Float   // saniye
+  duration        Float   // saniye
+  sourceUrl       String?
+  thumbnailUrl    String?
+  text            String?
+  gradient        String?
+  transitionAfter String? // "smooth-fade" | "hard-cut" vb.
+  effects         Json    @default("[]") // String[] olarak
+  characterId     String? // hangi karaktere ait (varsa)
+  orderIndex      Int     @default(0)
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, trackId, startTime])
+}
+
+model Character {
+  id          String  @id @default(cuid())
+  projectId   String
+  name        String
+  description String
+  voiceModel  String  // "InWorld 1.5 Max" | "Eleven Labs V3" vb.
+  avatarUrl   String?
+  visualPrompt String?
+  initials    String?
+  color       String?
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clips   Clip[]
+
+  @@index([projectId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  projectId String
+  role      String   // "user" | "assistant" | "system" | "tool"
+  content   String   @db.Text
+  meta      String?
+  toolName  String?
+  toolArgs  Json?
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+}
+
+// =====================================================
+// MEDIA & STORAGE
+// =====================================================
+
+model MediaAsset {
+  id           String   @id @default(cuid())
+  userId       String
+  projectId    String?
+  kind         String   // "image" | "video" | "audio" | "speech" | "music"
+  title        String
+  url          String   // R2 public URL veya kaynaktan gelen URL
+  storageKey   String?  // R2 object key (kalici asset ise)
+  sizeBytes    Int?
+  durationSec  Float?
+  sourceModel  String?  // Hangi AI modelinden uretildi
+  sourcePrompt String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+// =====================================================
+// JOBS
+// =====================================================
+
+model GenerationJob {
+  id              String   @id @default(cuid())
+  userId          String
+  projectId       String?
+  kind            String   // "image" | "video" | "voice" | "music" | "captions" | "export"
+  status          String   @default("queued") // queued | running | succeeded | failed | refunded
+  prompt          String   @db.Text
+  taskId          String?  // Kie.ai task id
+  family          String?  // Kie endpoint family
+  resultUrl       String?
+  error           String?  @db.Text
+  creditsCharged  Int      @default(0)
+  progress        Int      @default(0) // 0-100
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([taskId])
+}
+
+// =====================================================
+// CREDITS & PAYMENTS
+// =====================================================
+
+model CreditLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  delta     Int      // pozitif = yatiriliyor, negatif = harcaniyor
+  reason    String   // "signup_bonus" | "subscription" | "referral" | "satisfaction" | "generation_charge" | "refund" | "admin_adjust"
+  refType   String?  // "GenerationJob" | "Subscription" | "Referral"
+  refId     String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Subscription {
+  id                    String    @id @default(cuid())
+  userId                String
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?   @unique
+  stripePriceId         String?
+  plan                  String    // "free" | "pro" | "max"
+  status                String    // "active" | "past_due" | "canceled" | "trialing"
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}
+
+// =====================================================
+// REFERRAL
+// =====================================================
+
+model Referral {
+  id              String   @id @default(cuid())
+  referrerUserId  String
+  refereeUserId   String   @unique // her kullanici sadece bir defa referal ile gelir
+  status          String   @default("pending") // pending | rewarded
+  creditAwarded   Int      @default(0)
+  createdAt       DateTime @default(now())
+  rewardedAt      DateTime?
+
+  referrer User @relation("Referrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referee  User @relation("Referee", fields: [refereeUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerUserId])
+}
+
+// =====================================================
+// CHANNEL (PUBLISH TO CHANNEL)
+// =====================================================
+
+model Channel {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  slug      String   @unique
+  bannerUrl String?
+  bio       String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+}
