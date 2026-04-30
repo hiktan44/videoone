@@ -119,13 +119,13 @@ export function Sidebar() {
           Arkadaşını davet et
         </button>
 
-        <button
-          type="button"
+        <Link
+          href="/pricing"
           className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-ink-950 bg-gradient-amber shadow-glow-amber hover:shadow-[0_0_60px_-8px_rgba(245,158,11,0.6)] transition-shadow"
         >
           <Crown className="h-4 w-4" strokeWidth={2.2} />
           Pro&apos;ya Yükselt
-        </button>
+        </Link>
 
         <Show when="signed-in">
           <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-ink-800/60 transition-colors">
