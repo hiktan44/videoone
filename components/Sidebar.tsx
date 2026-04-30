@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import clsx from "clsx";
+import { Show, UserButton, SignInButton, SignUpButton } from "@clerk/nextjs";
 
 type NavItem = {
   icon: typeof Home;
@@ -124,15 +125,28 @@ export function Sidebar() {
           Pro&apos;ya Yükselt
         </button>
 
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-zinc-900/60">
-          <div className="h-8 w-8 rounded-full bg-gradient-vibe flex items-center justify-center text-sm font-semibold">
-            H
+        <Show when="signed-in">
+          <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-zinc-900/60">
+            <UserButton />
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] text-zinc-400">86 kredi</div>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-white truncate">Hikmet</div>
-            <div className="text-[11px] text-zinc-400">86 kredi</div>
+        </Show>
+        <Show when="signed-out">
+          <div className="flex flex-col gap-2">
+            <SignInButton mode="modal">
+              <button className="w-full rounded-lg border border-zinc-800 hover:bg-zinc-900 px-3 py-2 text-xs text-zinc-200 font-medium">
+                Giriş yap
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="w-full rounded-lg bg-gradient-vibe text-white px-3 py-2 text-xs font-semibold">
+                Hesap oluştur
+              </button>
+            </SignUpButton>
           </div>
-        </div>
+        </Show>
       </div>
     </aside>
   );
