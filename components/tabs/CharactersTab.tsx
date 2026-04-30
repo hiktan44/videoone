@@ -1,53 +1,112 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 import clsx from "clsx";
+import { AddCharacterModal } from "@/components/AddCharacterModal";
 
 export function CharactersTab() {
   const characters = useStore((s) => s.characters);
-  return (
-    <div className="p-3 space-y-3">
-      <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5">
-        <Search className="h-3.5 w-3.5 text-zinc-500" />
-        <input
-          placeholder="Karakter ara..."
-          className="flex-1 bg-transparent text-xs placeholder:text-zinc-500 focus:outline-none"
-        />
-      </div>
-      <button className="w-full rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 px-3 py-2 text-xs text-zinc-200 inline-flex items-center justify-center gap-1.5">
-        <Plus className="h-3.5 w-3.5" />
-        Karakter Ekle
-      </button>
+  const removeCharacter = useStore((s) => s.removeCharacter);
+  const [query, setQuery] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-      <div className="space-y-2 pt-1">
-        {characters.map((c) => (
-          <div
-            key={c.id}
-            className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900 p-2.5 cursor-pointer"
-          >
-            <div
-              className={clsx(
-                "h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-[11px] font-bold shrink-0",
-                c.color
-              )}
-            >
-              {c.initials}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-medium text-white truncate">
-                {c.name}
-              </div>
-              <div className="text-[11px] text-zinc-400 truncate">
-                {c.description}
-              </div>
-              <div className="mt-1 inline-block text-[10px] rounded bg-zinc-800 text-zinc-300 px-1.5 py-0.5">
-                {c.voiceModel}
-              </div>
-            </div>
+  const filtered = characters.filter(
+    (c) =>
+      c.name.toLowerCase().includes(query.toLowerCase()) ||
+      c.description.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const openNew = () => {
+    setEditingId(null);
+    setModalOpen(true);
+  };
+  const openEdit = (id: string) => {
+    setEditingId(id);
+    setModalOpen(true);
+  };
+  const remove = (id: string, name: string) => {
+    if (confirm(`"${name}" karakterini silmek istiyor musun?`)) {
+      removeCharacter(id);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-col h-full">
+        <div className="px-3 pt-3 pb-2 border-b border-ink-800 space-y-2.5">
+          <div className="text-sm font-semibold text-ink-50">Karakterler</div>
+          <div className="flex items-center gap-2 rounded-lg border border-ink-700 bg-ink-900 px-2.5 py-1.5">
+            <Search className="h-3.5 w-3.5 text-ink-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Karakter ara..."
+              className="flex-1 bg-transparent text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none"
+            />
           </div>
-        ))}
+          <button
+            onClick={openNew}
+            className="w-full rounded-lg bg-amber-500 hover:bg-amber-400 text-ink-950 px-3 py-2 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Karakter Ekle
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-2">
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-ink-500 text-xs">
+              {query ? "Eşleşen karakter yok." : "Henüz karakter yok. Yukarıdaki butonla ekle."}
+            </div>
+          )}
+          {filtered.map((c) => (
+            <div
+              key={c.id}
+              className="group flex items-center gap-3 rounded-lg border border-ink-700 bg-ink-900/40 hover:border-ink-600 hover:bg-ink-900 p-2.5 transition-all"
+            >
+              <div
+                className={clsx(
+                  "h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-[11px] font-bold text-ink-950 shrink-0",
+                  c.color || "from-amber-500 to-coral-500"
+                )}
+              >
+                {c.initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-ink-50 truncate">{c.name}</div>
+                <div className="text-[11px] text-ink-400 truncate">{c.description}</div>
+                <div className="mt-1 inline-block text-[10px] rounded bg-cyan-500/10 text-cyan-300 px-1.5 py-0.5 ring-1 ring-cyan-500/20">
+                  {c.voiceModel}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => openEdit(c.id)}
+                  title="Düzenle"
+                  className="h-7 w-7 rounded-md hover:bg-ink-800 text-ink-300 hover:text-amber-300 flex items-center justify-center"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => remove(c.id, c.name)}
+                  title="Sil"
+                  className="h-7 w-7 rounded-md hover:bg-coral-500/15 text-ink-300 hover:text-coral-400 flex items-center justify-center"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      <AddCharacterModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        editingId={editingId}
+      />
+    </>
   );
 }

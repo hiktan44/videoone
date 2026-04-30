@@ -28,6 +28,35 @@ export type MediaItem = {
   sourceUrl?: string;
 };
 
+export type Transition =
+  | "smooth-fade"
+  | "hard-cut"
+  | "whip-pan"
+  | "match-cut"
+  | "fade-to-black"
+  | "dissolve"
+  | "morph"
+  | "zoom-blur"
+  | "slide-left"
+  | "slide-right"
+  | "page-curl"
+  | "circle"
+  | "linear-blur"
+  | "simple-zoom"
+  | "water-drop"
+  | "glitch";
+
+export type Effect =
+  | "fade-in"
+  | "fade-out"
+  | "zoom-out-from-black"
+  | "zoom-in"
+  | "shake"
+  | "vignette"
+  | "color-grade-warm"
+  | "color-grade-cool"
+  | "film-grain";
+
 export type TimelineClip = {
   id: string;
   trackId: TrackId;
@@ -38,6 +67,9 @@ export type TimelineClip = {
   sourceUrl?: string; // gerçek asset URL'si (Kie.ai sonucu)
   thumbnailUrl?: string;
   text?: string; // altyazı içeriği (subtitle track için)
+  transitionAfter?: Transition; // klipten sonraki gecis
+  effects?: Effect[]; // klibe uygulanan efektler
+  characterId?: string; // hangi karaktere ait
 };
 
 export type Settings = {

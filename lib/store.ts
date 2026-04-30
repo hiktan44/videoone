@@ -81,6 +81,11 @@ type StoreState = {
   // Üretim işleri
   addJob: (job: Omit<GenerationJob, "id" | "createdAt">) => string;
   updateJob: (id: string, patch: Partial<GenerationJob>) => void;
+
+  // Karakter eylemleri
+  addCharacter: (character: Omit<Character, "id">) => string;
+  updateCharacter: (id: string, patch: Partial<Character>) => void;
+  removeCharacter: (id: string) => void;
 };
 
 function reflowTrack(clips: TimelineClip[], trackId: TrackId): TimelineClip[] {
@@ -246,6 +251,24 @@ export const useStore = create<StoreState>((set, get) => ({
   updateJob: (id, patch) =>
     set((s) => ({
       jobs: s.jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)),
+    })),
+
+  addCharacter: (c) => {
+    const id = `char-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    set((s) => ({ characters: [...s.characters, { ...c, id }] }));
+    return id;
+  },
+  updateCharacter: (id, patch) =>
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    })),
+  removeCharacter: (id) =>
+    set((s) => ({
+      characters: s.characters.filter((c) => c.id !== id),
+      // Bu karaktere atanmis kliplerin atamasini temizle
+      clips: s.clips.map((cl) =>
+        cl.characterId === id ? { ...cl, characterId: undefined } : cl
+      ),
     })),
 }));
 
