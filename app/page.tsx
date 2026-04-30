@@ -52,8 +52,12 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"recent" | "templates">("recent");
   const [mounted, setMounted] = useState(false);
 
+  // Clerk yuklenene kadar bos sayfa goster (hydration mismatch'i onlemek icin)
+  if (!isLoaded) {
+    return <div className="h-screen bg-zinc-950" />;
+  }
   // Login degilse landing page goster
-  if (isLoaded && !isSignedIn) {
+  if (!isSignedIn) {
     return <Landing />;
   }
 
