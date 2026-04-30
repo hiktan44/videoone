@@ -52,27 +52,18 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"recent" | "templates">("recent");
   const [mounted, setMounted] = useState(false);
 
-  // Clerk yuklenene kadar bos sayfa goster (hydration mismatch'i onlemek icin)
-  if (!isLoaded) {
-    return <div className="h-screen bg-zinc-950" />;
-  }
-  // Login degilse landing page goster
-  if (!isSignedIn) {
-    return <Landing />;
-  }
-
   const refreshProjects = useCallback(() => {
     const list = withDisplayLabels(loadAllProjects());
-    // En yeniye göre sırala
     list.sort((a, b) => b.updatedAt - a.updatedAt);
     setProjects(list);
   }, [setProjects]);
 
   useEffect(() => {
+    if (!isSignedIn) return;
     seedIfEmpty();
     refreshProjects();
     setMounted(true);
-  }, [refreshProjects]);
+  }, [isSignedIn, refreshProjects]);
 
   const handleNewProject = useCallback(() => {
     const p = makeSampleProject("İsimsiz Vibe");
@@ -91,6 +82,14 @@ export default function HomePage() {
     },
     [refreshProjects]
   );
+
+  // Tum hook'lardan SONRA conditional return (Rules of Hooks)
+  if (!isLoaded) {
+    return <div className="h-screen bg-zinc-950" />;
+  }
+  if (!isSignedIn) {
+    return <Landing />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-950">
