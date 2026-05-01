@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const projectId = body.projectId ? String(body.projectId) : null;
+  const rawProjectId = body.projectId ? String(body.projectId) : null;
   const userMessage = String(body.message || "").trim();
   if (!userMessage) {
     return new Response(JSON.stringify({ error: "Mesaj boş olamaz" }), {
@@ -42,15 +42,16 @@ export async function POST(req: Request) {
     });
   }
 
-  // Proje sahibi kontrolü (varsa)
-  if (projectId) {
-    const owns = await prisma.project.findFirst({ where: { id: projectId, userId: user.id } });
-    if (!owns) {
-      return new Response(JSON.stringify({ error: "Proje bulunamadı" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+  // Proje DB'de varsa kullan, yoksa null'a düşür (chat hala çalışsın, mesajlar kaydedilmesin)
+  let projectId: string | null = null;
+  if (rawProjectId) {
+    const owns = await prisma.project.findFirst({
+      where: { id: rawProjectId, userId: user.id },
+    });
+    if (owns) {
+      projectId = rawProjectId;
     }
+    // owns null ise = LS-only proje, projectId null bırakılır
   }
 
   // Geçmiş mesajları al

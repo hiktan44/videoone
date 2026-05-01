@@ -50,7 +50,7 @@ export function HeroPrompt() {
   }>({});
   const pipelineHandleRef = useRef<PipelineHandle | null>(null);
 
-  const startPipelineFromStoryboard = useCallback((storyboard: Storyboard) => {
+  const startPipelineFromStoryboard = useCallback(async (storyboard: Storyboard) => {
     // Wizard'in PipelineState'ini ilkle (tum sahneler "pending")
     const initial: WizardPipelineState = {
       active: "running",
@@ -63,12 +63,31 @@ export function HeroPrompt() {
     };
     setWizardPipeline(initial);
 
-    // Yeni proje olustur ve store'a yukle ki klipler bos timeline'a eklensin
-    // Sonra editor'e yonlendir; pipeline orada calismaya devam eder.
+    // Yeni proje olustur — login varsa API'den cuid al, yoksa LS-only id kullan
     const project = makeSampleProject(storyboard.topic.slice(0, 60) || "Yeni Vibe");
-    project.clips = []; // mock klipleri temizle, pipeline ekleyecek
+    project.clips = [];
     project.chatMessages = [];
     project.mediaItems = [];
+
+    // Login varsa API'ye POST → DB'de cuid ile yarat → o id'yi kullan
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: project.name,
+          gradient: project.gradient,
+          settings: project.settings,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.project?.id) {
+          project.id = data.project.id; // cuid ile uzerine yaz
+        }
+      }
+    } catch {}
+
     upsertProject(project);
     useStore.getState().loadProject(project);
     router.push(`/editor/${project.id}`);

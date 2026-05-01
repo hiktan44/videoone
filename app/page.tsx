@@ -65,8 +65,20 @@ export default function HomePage() {
     setMounted(true);
   }, [isSignedIn, refreshProjects]);
 
-  const handleNewProject = useCallback(() => {
+  const handleNewProject = useCallback(async () => {
     const p = makeSampleProject("İsimsiz Vibe");
+    // Login varsa API'den cuid al
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: p.name, gradient: p.gradient, settings: p.settings }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.project?.id) p.id = data.project.id;
+      }
+    } catch {}
     upsertProject(p);
     refreshProjects();
     router.push(`/editor/${p.id}`);
