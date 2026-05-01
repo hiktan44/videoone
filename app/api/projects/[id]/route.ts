@@ -18,31 +18,38 @@ async function getOwnedProject(userId: string, projectId: string) {
 }
 
 export async function GET(_: Request, { params }: Params) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
 
-  const project = await prisma.project.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      clips: { orderBy: [{ trackId: "asc" }, { startTime: "asc" }] },
-      characters: { orderBy: { createdAt: "asc" } },
-      chatMessages: { orderBy: { createdAt: "asc" } },
-      mediaItems: { orderBy: { createdAt: "desc" } },
-    },
-  });
-  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ project });
+    const project = await prisma.project.findFirst({
+      where: { id, userId: user.id },
+      include: {
+        clips: { orderBy: [{ trackId: "asc" }, { startTime: "asc" }] },
+        characters: { orderBy: { createdAt: "asc" } },
+        chatMessages: { orderBy: { createdAt: "asc" } },
+        mediaItems: { orderBy: { createdAt: "desc" } },
+      },
+    });
+    if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ project });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Sunucu hatası";
+    console.error("[/api/projects/[id] GET]", msg, e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 export async function PUT(req: Request, { params }: Params) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
-  const owned = await getOwnedProject(user.id, id);
-  if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
+    const owned = await getOwnedProject(user.id, id);
+    if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
   const { name, gradient, settings, clips, characters, chatMessages, isPublic, thumbnailUrl } = body;
 
   const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -118,16 +125,27 @@ export async function PUT(req: Request, { params }: Params) {
     return proj;
   });
 
-  return NextResponse.json({ project: updated });
+    return NextResponse.json({ project: updated });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Sunucu hatası";
+    console.error("[/api/projects/[id] PUT]", msg, e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 export async function DELETE(_: Request, { params }: Params) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
-  const owned = await getOwnedProject(user.id, id);
-  if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
+    const owned = await getOwnedProject(user.id, id);
+    if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.project.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+    await prisma.project.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Sunucu hatası";
+    console.error("[/api/projects/[id] DELETE]", msg, e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
