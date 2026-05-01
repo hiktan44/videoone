@@ -8,6 +8,7 @@ import { ArrowLeft, HelpCircle, Sparkles, Download, Upload, Film } from "lucide-
 import { useStore } from "@/lib/store";
 import { AutoSaver } from "@/components/AutoSaver";
 import { ExportModal } from "@/components/ExportModal";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   exportProjectAsJson,
   importProjectFromJson,
@@ -144,6 +145,7 @@ export function EditorTopBar() {
         >
           Yükselt
         </Link>
+        <ThemeToggle />
         <button className="h-9 w-9 rounded-lg hover:bg-ink-900 flex items-center justify-center text-ink-400">
           <HelpCircle className="h-4 w-4" />
         </button>

@@ -2,23 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===========================================
+   THEME SYSTEM — CSS variables
+   Default: dark (Obsidian Studio)
+   .light kök sınıfı: açık tema
+   =========================================== */
+
 :root {
   color-scheme: dark;
-  /* Obsidian Studio tokens */
-  --ink-950: #0a0a0b;
-  --ink-900: #0f0f11;
-  --ink-800: #16171a;
-  --ink-700: #1f2024;
-  --ink-600: #2a2b2f;
+  --bg: #0a0a0b;
+  --surface: #16171a;
+  --surface-2: #1f2024;
+  --border: #2a2b2f;
+  --text: #fafafa;
+  --text-muted: #8b8c92;
+  --text-faint: #5c5d63;
   --amber-500: #f59e0b;
   --cyan-500: #06b6d4;
   --coral-500: #fb7185;
 }
 
+html.light {
+  color-scheme: light;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --border: #e4e4e7;
+  --text: #0a0a0b;
+  --text-muted: #52525b;
+  --text-faint: #a1a1aa;
+}
+
+/* ink-* utility'lerini CSS var'larina map et — light tema icin override */
+html.light .bg-ink-950 { background-color: var(--bg) !important; }
+html.light .bg-ink-900,
+html.light .bg-ink-900\/40,
+html.light .bg-ink-900\/60,
+html.light .bg-ink-900\/80,
+html.light .bg-ink-900\/95 { background-color: var(--surface) !important; }
+html.light .bg-ink-800,
+html.light .bg-ink-800\/60 { background-color: var(--surface-2) !important; }
+
+html.light .text-ink-50,
+html.light .text-ink-100 { color: var(--text) !important; }
+html.light .text-ink-200,
+html.light .text-ink-300 { color: var(--text-muted) !important; }
+html.light .text-ink-400,
+html.light .text-ink-500 { color: var(--text-faint) !important; }
+
+html.light .border-ink-700,
+html.light .border-ink-800,
+html.light .border-ink-900 { border-color: var(--border) !important; }
+
+html.light .hover\:bg-ink-800:hover,
+html.light .hover\:bg-ink-900:hover { background-color: var(--surface-2) !important; }
+
+html.light .hover\:text-ink-50:hover,
+html.light .hover\:text-ink-100:hover { color: var(--text) !important; }
+
 html,
 body {
-  background-color: var(--ink-950);
-  color: #fafafa;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -29,7 +74,6 @@ body {
 }
 
 @layer utilities {
-  /* Gradient — sunset to ocean: amber → coral → cyan */
   .text-gradient {
     background: linear-gradient(120deg, #fbbf24 0%, #fb7185 45%, #22d3ee 100%);
     -webkit-background-clip: text;
@@ -50,28 +94,20 @@ body {
     background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
   }
 
-  /* Hero background — animated atmospheric warm/cool blend */
   .bg-gradient-hero {
-    background: radial-gradient(
-        circle at 15% 25%,
-        rgba(251, 191, 36, 0.18) 0%,
-        transparent 45%
-      ),
-      radial-gradient(
-        circle at 85% 30%,
-        rgba(34, 211, 238, 0.16) 0%,
-        transparent 45%
-      ),
-      radial-gradient(
-        circle at 50% 90%,
-        rgba(251, 113, 133, 0.14) 0%,
-        transparent 50%
-      );
+    background: radial-gradient(circle at 15% 25%, rgba(251, 191, 36, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 85% 30%, rgba(34, 211, 238, 0.16) 0%, transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(251, 113, 133, 0.14) 0%, transparent 50%);
     background-size: 200% 200%;
     animation: gradient-shift 22s ease infinite;
   }
 
-  /* Subtle grain overlay — adds film/print feel */
+  html.light .bg-gradient-hero {
+    background: radial-gradient(circle at 15% 25%, rgba(251, 191, 36, 0.10) 0%, transparent 45%),
+      radial-gradient(circle at 85% 30%, rgba(34, 211, 238, 0.10) 0%, transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(251, 113, 133, 0.08) 0%, transparent 50%);
+  }
+
   .grain-overlay::after {
     content: "";
     position: absolute;
@@ -82,26 +118,6 @@ body {
     z-index: 1;
   }
 
-  /* Border with subtle warm/cool gradient — premium feel */
-  .border-gradient {
-    position: relative;
-  }
-  .border-gradient::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), rgba(34, 211, 238, 0.3));
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  /* Glow rings for hover states */
   .ring-glow-amber {
     box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 0 30px -4px rgba(245, 158, 11, 0.4);
   }
@@ -109,14 +125,8 @@ body {
     box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3), 0 0 30px -4px rgba(34, 211, 238, 0.4);
   }
 
-  /* Shimmer for loading states */
   .shimmer {
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.05) 50%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
   }
@@ -126,20 +136,19 @@ body {
     height: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(128, 128, 128, 0.2);
     border-radius: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(245, 158, 11, 0.25);
+    background: rgba(245, 158, 11, 0.4);
   }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  /* Selection */
   ::selection {
     background: rgba(245, 158, 11, 0.3);
-    color: #fafafa;
+    color: var(--text);
   }
 }
 
@@ -153,7 +162,6 @@ textarea {
   resize: none;
 }
 
-/* Focus ring */
 *:focus-visible {
   outline: 2px solid #f59e0b;
   outline-offset: 2px;

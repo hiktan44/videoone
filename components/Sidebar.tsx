@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { Show, UserButton, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
   icon: typeof Home;
@@ -133,6 +134,7 @@ export function Sidebar() {
             <div className="flex-1 min-w-0">
               <div className="text-[11px] text-amber-300 font-medium">86 kredi</div>
             </div>
+            <ThemeToggle />
           </div>
         </Show>
         <Show when="signed-out">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, ArrowUp, ChevronDown, Lightbulb, Wand2, Loader2, AlertCircle, Film } from "lucide-react";
 import { Dropdown, type DropdownGroup } from "./Dropdown";
 import { useStore } from "@/lib/store";
@@ -10,6 +11,8 @@ import { ReferenceUploader, type ReferenceAsset } from "./ReferenceUploader";
 import { ScenarioWizard, type PipelineState as WizardPipelineState, type PipelineSceneState } from "./ScenarioWizard";
 import { runStoryboardPipeline, type PipelineHandle } from "@/lib/pipeline";
 import type { Storyboard } from "@/lib/scenario";
+import { makeSampleProject } from "@/lib/mocks";
+import { upsertProject } from "@/lib/persistence";
 
 function buildGroups(cats: KieCategory[]): DropdownGroup[] {
   const groups: DropdownGroup[] = [];
@@ -23,6 +26,7 @@ const IMG_GROUPS = buildGroups(["image", "image-edit", "image-to-image", "upscal
 const VID_GROUPS = buildGroups(["video", "image-to-video", "video-extend", "video-edit", "lipsync", "video-upscale"]);
 
 export function HeroPrompt() {
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
@@ -59,6 +63,16 @@ export function HeroPrompt() {
     };
     setWizardPipeline(initial);
 
+    // Yeni proje olustur ve store'a yukle ki klipler bos timeline'a eklensin
+    // Sonra editor'e yonlendir; pipeline orada calismaya devam eder.
+    const project = makeSampleProject(storyboard.topic.slice(0, 60) || "Yeni Vibe");
+    project.clips = []; // mock klipleri temizle, pipeline ekleyecek
+    project.chatMessages = [];
+    project.mediaItems = [];
+    upsertProject(project);
+    useStore.getState().loadProject(project);
+    router.push(`/editor/${project.id}`);
+
     // Pipeline'i baslat
     const handle = runStoryboardPipeline(storyboard, {
       aspectRatio: settings.aspectRatio,
@@ -90,7 +104,7 @@ export function HeroPrompt() {
       },
     });
     pipelineHandleRef.current = handle;
-  }, [settings.aspectRatio]);
+  }, [settings.aspectRatio, router]);
 
   const cancelPipeline = useCallback(() => {
     pipelineHandleRef.current?.cancel();
