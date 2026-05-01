@@ -173,7 +173,7 @@ export function defaultSettings(): Settings {
   // Varsayilan modelleri kataloga gore models.ts secer; burada baslangic degeri konur.
   return {
     imageModel: "Seedream 4.5 Text-to-Image",
-    videoModel: "Google Veo 3.1 Fast",
+    videoModel: "Veo 3.1 Fast",
     voiceModel: "InWorld 1.5 Max",
     musicModel: "Suno V4.5",
     language: "Türkçe",

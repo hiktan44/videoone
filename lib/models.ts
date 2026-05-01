@@ -116,14 +116,38 @@ function entryToMapping(entry: KieModelEntry): ModelMapping {
   return m;
 }
 
+// Eski display adlari icin alias eslestirme (localStorage'daki eski projeler kurtarilsin).
+const ALIAS_MAP: Record<string, string> = {
+  "Google Veo 3.1 Fast": "Veo 3.1 Fast",
+  "Google Veo 3.1": "Veo 3.1 Fast",
+  "Google Veo 3.1 Lite": "Veo 3.1 Fast",
+  "LTX2": "Kling 3.0",
+  "Flux Klein 9B": "Flux 2 Pro Text-to-Image",
+  "Nano Banana Pro": "Nano Banana 2",
+  "Seedream 4.5": "Seedream 4.5 Text-to-Image",
+};
+
 export function getMapping(displayName: string): ModelMapping {
-  const entry = findEntry(displayName);
+  // Once dogrudan eslesme dene
+  let entry = findEntry(displayName);
   if (entry) return entryToMapping(entry);
+
+  // Alias varsa onu dene
+  const alias = ALIAS_MAP[displayName];
+  if (alias) {
+    entry = findEntry(alias);
+    if (entry) return entryToMapping(entry);
+  }
+
   // Eski/manuel ses adlari icin fallback (jobs ailesinde varsayim)
   if (VOICE_FALLBACK.includes(displayName)) {
     return { family: "jobs", jobsModelId: `voice/${displayName.toLowerCase().replace(/\s+/g, "-")}`, kind: "voice" };
   }
-  // Bilinmeyen — "Web Render" gibi yer tutucular
+
+  // Bilinmeyen — "Web Render" gibi yer tutucular icin Veo'ya guvenli fallback
+  console.warn(`[models] Bilinmeyen model "${displayName}" — Veo 3.1 Fast'e dususuldu`);
+  const veoEntry = findEntry("Veo 3.1 Fast");
+  if (veoEntry) return entryToMapping(veoEntry);
   return { family: "jobs", jobsModelId: undefined, kind: "video" };
 }
 
