@@ -257,10 +257,14 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
     const isKling3 = modelId === "kling-3.0" || modelId === "kling-3.0/video";
 
     if (isSora2) {
-      // Sora 2: aspect_ratio = "landscape"|"portrait" (1:1 desteklenmez), n_frames istege bagli
+      // Sora 2: aspect_ratio = "landscape"|"portrait" (1:1 desteklenmez), n_frames "10"
+      // Sora 2 Pro ek olarak size: "standard" istiyor
       const ar = input.aspect_ratio || "16:9";
       inputBody.aspect_ratio = ar === "9:16" ? "portrait" : "landscape";
-      inputBody.n_frames = "10"; // standart 10 sn
+      inputBody.n_frames = "10";
+      if (modelId.includes("sora-2-pro")) {
+        inputBody.size = "standard";
+      }
     } else if (isGrok) {
       // Grok Imagine: aspect_ratio ve duration gonderme (range validation)
     } else if (isKling3) {
