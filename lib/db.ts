@@ -1,5 +1,4 @@
-// Prisma client singleton — Next.js dev modunda hot reload sirasinda bagimli baglanti
-// olusmasini onlemek icin global'e cache'lenir.
+// Prisma client singleton — LAZY init, module-load'da bagiantı denemesin.
 
 import { PrismaClient } from "@prisma/client";
 
@@ -8,12 +7,28 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-export const prisma =
-  global.__prisma ??
-  new PrismaClient({
+let _client: PrismaClient | null = null;
+
+function makeClient(): PrismaClient {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
-
-if (process.env.NODE_ENV !== "production") {
-  global.__prisma = prisma;
 }
+
+// Lazy proxy — sadece bir property'e erisilince gercek client yaratilir.
+// Bu sayede DATABASE_URL eksikse veya Postgres dustaginde module-load patlamaz.
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_t, prop) {
+    if (!_client) {
+      if (global.__prisma) {
+        _client = global.__prisma;
+      } else {
+        _client = makeClient();
+        if (process.env.NODE_ENV !== "production") {
+          global.__prisma = _client;
+        }
+      }
+    }
+    return (_client as any)[prop];
+  },
+});
