@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+# Export Worker — FFmpeg ile timeline'i mp4'e birlestirir, R2'ye yukler.
+
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev --legacy-peer-deps
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx prisma generate
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+# FFmpeg + openssl (prisma) kur
+RUN apk add --no-cache ffmpeg openssl
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/workers ./workers
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/package.json ./package.json
+
+CMD ["npx", "tsx", "workers/export-worker.ts"]

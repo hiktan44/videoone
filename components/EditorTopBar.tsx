@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, HelpCircle, Sparkles, Download, Upload } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
+import { ArrowLeft, HelpCircle, Sparkles, Download, Upload, Film } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { AutoSaver } from "@/components/AutoSaver";
+import { ExportModal } from "@/components/ExportModal";
 import {
   exportProjectAsJson,
   importProjectFromJson,
@@ -19,6 +21,7 @@ export function EditorTopBar() {
   const credits = useStore((s) => s.credits);
   const exportCurrentAsProject = useStore((s) => s.exportCurrentAsProject);
   const [editing, setEditing] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleExport = () => {
@@ -62,7 +65,9 @@ export function EditorTopBar() {
   };
 
   return (
-    <header className="h-14 shrink-0 border-b border-zinc-900 bg-zinc-950 px-3 flex items-center gap-3">
+    <>
+    <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+    <header className="h-14 shrink-0 border-b border-ink-800 bg-ink-950 px-3 flex items-center gap-3">
       <Link
         href="/"
         className="h-9 w-9 rounded-lg hover:bg-zinc-900 flex items-center justify-center text-zinc-400"
@@ -98,20 +103,28 @@ export function EditorTopBar() {
 
       <div className="flex items-center gap-2">
         <button
+          onClick={() => setExportOpen(true)}
+          title="MP4 olarak dışa aktar"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-ink-950 transition-colors shadow-glow-amber"
+        >
+          <Film className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Export MP4
+        </button>
+        <button
           onClick={handleExport}
           title="Projeyi JSON olarak indir"
-          className="hidden md:inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700"
+          className="hidden md:inline-flex items-center gap-1.5 text-xs text-ink-300 hover:text-ink-50 px-2.5 py-1.5 rounded-lg bg-ink-900 border border-ink-700 hover:border-ink-600"
         >
           <Download className="h-3.5 w-3.5" />
-          JSON İndir
+          JSON
         </button>
         <button
           onClick={handleImportClick}
           title="JSON dosyasından proje yükle"
-          className="hidden md:inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700"
+          className="hidden md:inline-flex items-center gap-1.5 text-xs text-ink-300 hover:text-ink-50 px-2.5 py-1.5 rounded-lg bg-ink-900 border border-ink-700 hover:border-ink-600"
         >
           <Upload className="h-3.5 w-3.5" />
-          JSON Yükle
+          Yükle
         </button>
         <input
           ref={fileInputRef}
@@ -121,20 +134,22 @@ export function EditorTopBar() {
           className="hidden"
         />
 
-        <div className="hidden md:flex items-center gap-1.5 text-xs text-zinc-300 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
-          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-          {credits} kredi
+        <div className="hidden md:flex items-center gap-1.5 text-xs text-amber-300 font-medium px-2.5 py-1.5 rounded-lg bg-ink-900 border border-ink-700">
+          <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+          {credits}
         </div>
-        <button className="text-xs font-semibold rounded-lg px-3 py-1.5 bg-gradient-vibe text-white">
+        <Link
+          href="/pricing"
+          className="text-xs font-semibold rounded-lg px-3 py-1.5 bg-gradient-amber text-ink-950 hover:opacity-90 transition-opacity"
+        >
           Yükselt
-        </button>
-        <button className="h-9 w-9 rounded-lg hover:bg-zinc-900 flex items-center justify-center text-zinc-400">
+        </Link>
+        <button className="h-9 w-9 rounded-lg hover:bg-ink-900 flex items-center justify-center text-ink-400">
           <HelpCircle className="h-4 w-4" />
         </button>
-        <div className="h-8 w-8 rounded-full bg-gradient-vibe flex items-center justify-center text-xs font-semibold ml-1">
-          H
-        </div>
+        <UserButton />
       </div>
     </header>
+    </>
   );
 }
