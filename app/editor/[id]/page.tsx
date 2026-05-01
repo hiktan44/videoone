@@ -7,6 +7,8 @@ import {
   loadAllProjects,
   seedIfEmpty,
   setActiveProjectId,
+  fetchProjectById,
+  apiUpsert,
 } from "@/lib/persistence";
 import { EditorTopBar } from "@/components/EditorTopBar";
 import { EditorTabStrip } from "@/components/EditorTabStrip";
@@ -32,21 +34,40 @@ export default function EditorPage() {
 
   useEffect(() => {
     if (!params?.id) return;
+    let cancelled = false;
 
-    // İlk kez açıldıysa seed et
-    seedIfEmpty();
+    (async () => {
+      // İlk kez açıldıysa seed et
+      seedIfEmpty();
 
-    const list = loadAllProjects();
-    const found = list.find((p) => p.id === params.id);
+      // 1. Once API'den dene (login varsa); fetchProjectById fallback olarak LS'i de bakar
+      let found = await fetchProjectById(params.id);
 
-    if (!found) {
-      router.push("/");
-      return;
-    }
+      // 2. Hiç yoksa anasayfaya don
+      if (!found) {
+        if (cancelled) return;
+        router.push("/");
+        return;
+      }
 
-    loadProject(found);
-    setActiveProjectId(found.id);
-    setLoaded(true);
+      // 3. Eski LS proje ID'siyse (cuid degil) -> DB'ye senkronize et (one-shot migration)
+      const looksLikeApiId = /^c[a-z0-9]{20,}$/i.test(found.id);
+      if (!looksLikeApiId) {
+        // Arka planda API'ye gonder (login varsa); yenisini olusturup yonlendir
+        try {
+          await apiUpsert(found);
+        } catch {}
+      }
+
+      if (cancelled) return;
+      loadProject(found);
+      setActiveProjectId(found.id);
+      setLoaded(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [params?.id, loadProject, router]);
 
   if (!loaded || projectId !== params?.id) {

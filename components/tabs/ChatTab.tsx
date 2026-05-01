@@ -33,9 +33,11 @@ export function ChatTab() {
   const [rating, setRating] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  // Geçmişi yükle (DB'den)
+  // Geçmişi yükle (DB'den) — yalnızca cuid (DB) projeler için
   useEffect(() => {
     if (!projectId) return;
+    const isApiId = /^c[a-z0-9]{20,}$/i.test(projectId);
+    if (!isApiId) return; // localStorage projesi → boş chat
     fetch(`/api/projects/${projectId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
