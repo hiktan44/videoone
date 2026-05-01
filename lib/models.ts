@@ -116,15 +116,27 @@ function entryToMapping(entry: KieModelEntry): ModelMapping {
   return m;
 }
 
-// Eski display adlari icin alias eslestirme (localStorage'daki eski projeler kurtarilsin).
+// Eski display adlari icin alias eslestirme + Kie tarafinda calismayan
+// modelleri calisan eşdegerlerine yonlendirme.
 const ALIAS_MAP: Record<string, string> = {
+  // Eski isim aliaslari
   "Google Veo 3.1 Fast": "Veo 3.1 Fast",
   "Google Veo 3.1": "Veo 3.1 Fast",
   "Google Veo 3.1 Lite": "Veo 3.1 Fast",
-  "LTX2": "Kling 3.0",
+  "LTX2": "Kling 2.5 Turbo Text-to-Video Pro",
   "Flux Klein 9B": "Flux 2 Pro Text-to-Image",
   "Nano Banana Pro": "Nano Banana 2",
   "Seedream 4.5": "Seedream 4.5 Text-to-Image",
+
+  // Kie'da artik desteklenmeyen / parametre uyumsuz modeller -> calisan esdeger
+  "Kling 3.0": "Kling 2.5 Turbo Text-to-Video Pro",
+  "Kling 3.0 Video": "Kling 2.5 Turbo Text-to-Video Pro",
+  "Seedance 1.5 Pro": "Seedance 2", // duration validation sorunu
+  "Sora 2 Text-to-Video": "Veo 3.1 Fast", // aspect_ratio uyumsuz
+  "Sora 2 Pro Text-to-Video": "Veo 3.1 Fast",
+  "Sora 2 Image-to-Video": "Veo 3.1 Fast",
+  "Sora 2 Pro Image-to-Video": "Veo 3.1 Fast",
+  "Grok Imagine Text-to-Video": "Kling 2.5 Turbo Text-to-Video Pro", // duration range sorunu
 };
 
 export function getMapping(displayName: string): ModelMapping {
