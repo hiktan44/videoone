@@ -128,10 +128,6 @@ const ALIAS_MAP: Record<string, string> = {
   "Nano Banana Pro": "Nano Banana 2",
   "Seedream 4.5": "Seedream 4.5 Text-to-Image",
 
-  // Kie'da artik desteklenmeyen modeller -> calisan esdeger
-  "Kling 3.0": "Kling 2.5 Turbo Text-to-Video Pro",
-  "Kling 3.0 Video": "Kling 2.5 Turbo Text-to-Video Pro",
-  "Seedance 1.5 Pro": "Seedance 2", // duration enum bilinmiyor
 };
 
 export function getMapping(displayName: string): ModelMapping {

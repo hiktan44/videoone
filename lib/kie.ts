@@ -243,30 +243,45 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
     }
 
     // jobs ailesi (varsayilan): birlesik createTask
-    const modelId = map.jobsModelId || "";
+    // Doc: https://docs.kie.ai/market/quickstart
+    let modelId = map.jobsModelId || "";
     const inputBody: any = {
       prompt: input.prompt,
     };
 
-    // Model bazli body shape ozellestirmeleri (test edilmis)
+    // Model bazli body shape — Kie docs ve canli test ile dogrulanmis
     const isSora2 = modelId.startsWith("sora-2");
     const isGrok = modelId.startsWith("grok-imagine/");
     const isSeedream = modelId.startsWith("seedream/") || modelId.startsWith("bytedance/seedream");
+    const isSeedance15 = modelId === "bytedance/seedance-1.5-pro";
+    const isKling3 = modelId === "kling-3.0" || modelId === "kling-3.0/video";
 
     if (isSora2) {
-      // Sora 2: aspect_ratio yerine resolution istiyor (test ile dogrulandi)
+      // Sora 2: aspect_ratio = "landscape"|"portrait" (1:1 desteklenmez), n_frames istege bagli
       const ar = input.aspect_ratio || "16:9";
-      if (ar === "9:16") inputBody.resolution = "720x1280";
-      else if (ar === "1:1") inputBody.resolution = "720x720";
-      else inputBody.resolution = "1280x720";
+      inputBody.aspect_ratio = ar === "9:16" ? "portrait" : "landscape";
+      inputBody.n_frames = "10"; // standart 10 sn
     } else if (isGrok) {
-      // Grok Imagine: aspect_ratio gondermek validation patliyor — atla
-      // duration de gondermiyoruz (range validation)
+      // Grok Imagine: aspect_ratio ve duration gonderme (range validation)
+    } else if (isKling3) {
+      // Kling 3.0: kling-3.0/video modelId, sound REQUIRED, mode "std"/"pro"
+      modelId = "kling-3.0/video"; // her durumda /video kullan
+      inputBody.aspect_ratio = input.aspect_ratio || "16:9";
+      inputBody.duration = String(input.duration || 5);
+      inputBody.mode = "std";
+      inputBody.multi_shots = false;
+      inputBody.sound = true;
+    } else if (isSeedance15) {
+      // Seedance 1.5 Pro: duration STRING + discrete enum (sadece "8" veya "12"), resolution gerekli
+      inputBody.aspect_ratio = input.aspect_ratio || "16:9";
+      inputBody.resolution = "720p";
+      // Kullanici 5 sn istemisse en yakin enum: 8
+      const d = input.duration || 5;
+      inputBody.duration = d <= 10 ? "8" : "12";
     } else if (isSeedream) {
-      // Seedream: aspect_ratio destekler, varsayilan kullan
       inputBody.aspect_ratio = input.aspect_ratio || "16:9";
     } else {
-      // Diger jobs modelleri (Kling, Seedance, Hailuo, Wan, vb.)
+      // Diger jobs modelleri (Kling 2.5, Seedance 2, Hailuo, Wan, vb.)
       inputBody.aspect_ratio = input.aspect_ratio || "16:9";
     }
 
@@ -283,12 +298,12 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
       if (input.videoUrls.length === 1) inputBody.video_url = input.videoUrls[0];
     }
     if (input.taskIdInput) inputBody.task_id = input.taskIdInput;
-    // Duration sadece Grok ve Sora 2 disindaki jobs modellerine gonder
-    if (input.duration && !isGrok && !isSora2) {
+    // Duration sadece Grok/Sora 2/Kling 3/Seedance 1.5 disindaki jobs modellerine gonder
+    if (input.duration && !isGrok && !isSora2 && !isKling3 && !isSeedance15) {
       inputBody.duration = String(input.duration);
     }
     if (input.language) inputBody.language = input.language;
-    const body = { model: map.jobsModelId, input: inputBody };
+    const body = { model: modelId, input: inputBody };
     const data = await kieFetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
       method: "POST",
       headers: authHeaders(),

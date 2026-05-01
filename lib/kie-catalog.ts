@@ -133,15 +133,15 @@ export const KIE_CATALOG: KieModelEntry[] = [
   { display: "Kling 2.1 Standard", family: "jobs", modelId: "kling/v2-1-standard", category: "video" },
   { display: "Kling 2.6 Motion Control", family: "jobs", modelId: "kling-2.6/motion-control", category: "image-to-video", notes: "motion control video gerektirir" },
   { display: "Kling 3.0 Motion Control", family: "jobs", modelId: "kling-3.0/motion-control", category: "image-to-video", notes: "motion control video gerektirir" },
-  // Kling 3.0 Kie tarafinda artik desteklenmiyor — Kling 2.5 Turbo ile yer degisirildi
-  // { display: "Kling 3.0", family: "jobs", modelId: "kling-3.0", category: "video" },
-  // { display: "Kling 3.0 Video", family: "jobs", modelId: "kling-3.0/video", category: "video-edit", notes: "video input gerektirir" },
+  // Kling 3.0: kling-3.0/video modelId + sound:true REQUIRED — kie.ts'te handle ediliyor
+  { display: "Kling 3.0", family: "jobs", modelId: "kling-3.0", category: "video" },
+  { display: "Kling 3.0 Video", family: "jobs", modelId: "kling-3.0/video", category: "video-edit", notes: "video input gerektirir" },
 
   // --- VIDEO: ByteDance / Seedance ---
   { display: "Seedance 2", family: "jobs", modelId: "bytedance/seedance-2", category: "video" },
   { display: "Seedance 2 Fast", family: "jobs", modelId: "bytedance/seedance-2-fast", category: "video" },
-  // Seedance 1.5 Pro Kie validation hatasi (duration discrete) — Seedance 2'ye yonlendir
-  // { display: "Seedance 1.5 Pro", family: "jobs", modelId: "bytedance/seedance-1.5-pro", category: "video" },
+  // Seedance 1.5 Pro: duration enum "8" veya "12" — kie.ts'te handle ediliyor
+  { display: "Seedance 1.5 Pro", family: "jobs", modelId: "bytedance/seedance-1.5-pro", category: "video" },
   { display: "Seedance V1 Pro Fast Image-to-Video", family: "jobs", modelId: "bytedance/v1-pro-fast-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
   { display: "Seedance V1 Pro Image-to-Video", family: "jobs", modelId: "bytedance/v1-pro-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
   { display: "Seedance V1 Pro Text-to-Video", family: "jobs", modelId: "bytedance/v1-pro-text-to-video", category: "video" },
