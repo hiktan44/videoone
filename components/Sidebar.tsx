@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   Home,
   Folder,
@@ -17,6 +18,7 @@ import {
 import clsx from "clsx";
 import { Show, UserButton, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { ThemeToggle } from "./ThemeToggle";
+import { ReferralModal } from "./ReferralModal";
 
 type NavItem = {
   icon: typeof Home;
@@ -77,7 +79,10 @@ function NavRow({ item, active }: { item: NavItem; active?: boolean }) {
 }
 
 export function Sidebar() {
+  const [referralOpen, setReferralOpen] = useState(false);
   return (
+    <>
+    <ReferralModal open={referralOpen} onClose={() => setReferralOpen(false)} />
     <aside className="w-60 shrink-0 bg-ink-950 border-r border-ink-800 h-screen flex flex-col">
       <div className="px-5 pt-6 pb-5 flex items-center gap-2">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
@@ -112,12 +117,12 @@ export function Sidebar() {
       <div className="px-3 pb-5 space-y-3">
         <button
           type="button"
-          title="Yakında"
-          disabled
-          className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-500 opacity-70 cursor-not-allowed"
+          onClick={() => setReferralOpen(true)}
+          className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-200 hover:text-amber-300 hover:bg-ink-800 transition-colors"
         >
           <UserPlus className="h-4 w-4" />
           Arkadaşını davet et
+          <span className="ml-auto text-[9px] text-amber-400">+200</span>
         </button>
 
         <Link
@@ -153,5 +158,6 @@ export function Sidebar() {
         </Show>
       </div>
     </aside>
+    </>
   );
 }

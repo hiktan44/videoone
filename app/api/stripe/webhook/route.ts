@@ -6,6 +6,7 @@ import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { getStripe, getPlanByPriceId, PLANS } from "@/lib/stripe";
 import { earnCredits } from "@/lib/credits";
+import { sendSubscriptionConfirmEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -99,6 +100,16 @@ export async function POST(req: Request) {
           refId: sub.id,
           metadata: { invoiceId: inv.id },
         });
+
+        // Confirm email
+        const userRecord = await prisma.user.findUnique({ where: { id: sub.userId } });
+        if (userRecord?.email) {
+          void sendSubscriptionConfirmEmail(
+            userRecord.email,
+            planMeta.name,
+            planMeta.monthlyCredits
+          ).catch(() => {});
+        }
         break;
       }
     }

@@ -3,6 +3,7 @@
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "./db";
+import { sendWelcomeEmail } from "./email";
 
 /** Mevcut kullanicinin Clerk ID'sini ve DB User satirini doner. Login degilse null. */
 export async function getCurrentUser() {
@@ -22,6 +23,7 @@ export async function getCurrentUser() {
     const email = clerkUser.emailAddresses[0]?.emailAddress ?? `${userId}@clerk.local`;
     const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null;
 
+    const isNew = !dbUser;
     dbUser = await prisma.user.upsert({
       where: { clerkId: userId },
       update: { email, name, imageUrl: clerkUser.imageUrl },
@@ -32,6 +34,23 @@ export async function getCurrentUser() {
         imageUrl: clerkUser.imageUrl,
       },
     });
+
+    // Yeni kullaniciysa: signup bonus ledger entry + welcome email + analytics
+    if (isNew) {
+      await prisma.creditLedger.create({
+        data: {
+          userId: dbUser.id,
+          delta: 100,
+          reason: "signup_bonus",
+          metadata: {},
+        },
+      }).catch(() => {});
+      void sendWelcomeEmail(email, name).catch(() => {});
+      // Analytics — fire and forget
+      const { track } = await import("./posthog");
+      track(dbUser.id, "user_signed_up", { email, name });
+    }
+
     return dbUser;
   } catch (e) {
     console.error("[auth] getCurrentUser error:", e instanceof Error ? e.message : e);
