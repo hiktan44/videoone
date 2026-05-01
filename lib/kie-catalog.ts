@@ -114,10 +114,9 @@ export const KIE_CATALOG: KieModelEntry[] = [
   { display: "Wan 2.7 Image", family: "jobs", modelId: "wan/2-7-image", category: "image" },
   { display: "Wan 2.7 Image Pro", family: "jobs", modelId: "wan/2-7-image-pro", category: "image" },
 
-  // --- VIDEO: Grok Imagine ---
-  // Grok Imagine duration validation hatasi — Kling 2.5 Turbo'ya yonlendir
-  // { display: "Grok Imagine Text-to-Video", family: "jobs", modelId: "grok-imagine/text-to-video", category: "video" },
-  // { display: "Grok Imagine Image-to-Video", family: "jobs", modelId: "grok-imagine/image-to-video", category: "image-to-video", notes: "image input gerektirir" },
+  // --- VIDEO: Grok Imagine (aspect_ratio/duration gondermeden — kie.ts'te handle ediliyor) ---
+  { display: "Grok Imagine Text-to-Video", family: "jobs", modelId: "grok-imagine/text-to-video", category: "video" },
+  { display: "Grok Imagine Image-to-Video", family: "jobs", modelId: "grok-imagine/image-to-video", category: "image-to-video", notes: "image input gerektirir" },
   { display: "Grok Imagine Upscale", family: "jobs", modelId: "grok-imagine/upscale", category: "video-upscale", notes: "task_id input gerektirir" },
   { display: "Grok Imagine Extend", family: "jobs", modelId: "grok-imagine/extend", category: "video-extend", notes: "task_id input gerektirir" },
 
@@ -157,12 +156,11 @@ export const KIE_CATALOG: KieModelEntry[] = [
   { display: "Hailuo 02 Text-to-Video Standard", family: "jobs", modelId: "hailuo/02-text-to-video-standard", category: "video" },
   { display: "Hailuo 02 Image-to-Video Standard", family: "jobs", modelId: "hailuo/02-image-to-video-standard", category: "image-to-video", notes: "image input gerektirir" },
 
-  // --- VIDEO: Sora 2 ---
-  // Sora 2 Kie tarafinda aspect_ratio/resolution farkli format istiyor — Veo 3.1'e yonlendir
-  // { display: "Sora 2 Image-to-Video", family: "jobs", modelId: "sora-2-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  // { display: "Sora 2 Text-to-Video", family: "jobs", modelId: "sora-2-text-to-video", category: "video" },
-  // { display: "Sora 2 Pro Image-to-Video", family: "jobs", modelId: "sora-2-pro-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  // { display: "Sora 2 Pro Text-to-Video", family: "jobs", modelId: "sora-2-pro-text-to-video", category: "video" },
+  // --- VIDEO: Sora 2 (resolution ile body shape ozel — kie.ts'te handle ediliyor) ---
+  { display: "Sora 2 Image-to-Video", family: "jobs", modelId: "sora-2-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
+  { display: "Sora 2 Text-to-Video", family: "jobs", modelId: "sora-2-text-to-video", category: "video" },
+  { display: "Sora 2 Pro Image-to-Video", family: "jobs", modelId: "sora-2-pro-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
+  { display: "Sora 2 Pro Text-to-Video", family: "jobs", modelId: "sora-2-pro-text-to-video", category: "video" },
   { display: "Sora Watermark Remover", family: "jobs", modelId: "sora-watermark-remover", category: "video-edit", notes: "video input gerektirir" },
   { display: "Sora 2 Pro Storyboard", family: "jobs", modelId: "sora-2-pro-storyboard", category: "video", notes: "shots dizisi gerektirir" },
   { display: "Sora 2 Characters", family: "jobs", modelId: "sora-2-characters", category: "image-to-video", notes: "character video gerektirir" },

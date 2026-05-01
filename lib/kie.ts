@@ -243,12 +243,34 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
     }
 
     // jobs ailesi (varsayilan): birlesik createTask
+    const modelId = map.jobsModelId || "";
     const inputBody: any = {
       prompt: input.prompt,
-      aspect_ratio: input.aspect_ratio || "16:9",
     };
+
+    // Model bazli body shape ozellestirmeleri (test edilmis)
+    const isSora2 = modelId.startsWith("sora-2");
+    const isGrok = modelId.startsWith("grok-imagine/");
+    const isSeedream = modelId.startsWith("seedream/") || modelId.startsWith("bytedance/seedream");
+
+    if (isSora2) {
+      // Sora 2: aspect_ratio yerine resolution istiyor (test ile dogrulandi)
+      const ar = input.aspect_ratio || "16:9";
+      if (ar === "9:16") inputBody.resolution = "720x1280";
+      else if (ar === "1:1") inputBody.resolution = "720x720";
+      else inputBody.resolution = "1280x720";
+    } else if (isGrok) {
+      // Grok Imagine: aspect_ratio gondermek validation patliyor — atla
+      // duration de gondermiyoruz (range validation)
+    } else if (isSeedream) {
+      // Seedream: aspect_ratio destekler, varsayilan kullan
+      inputBody.aspect_ratio = input.aspect_ratio || "16:9";
+    } else {
+      // Diger jobs modelleri (Kling, Seedance, Hailuo, Wan, vb.)
+      inputBody.aspect_ratio = input.aspect_ratio || "16:9";
+    }
+
     if (input.imageUrls?.length) {
-      // Cogu Kie modeli image_urls (snake_case) kullaniyor; bazilari image_url tek string.
       inputBody.image_urls = input.imageUrls;
       if (input.imageUrls.length === 1) inputBody.image_url = input.imageUrls[0];
     }
@@ -261,7 +283,10 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
       if (input.videoUrls.length === 1) inputBody.video_url = input.videoUrls[0];
     }
     if (input.taskIdInput) inputBody.task_id = input.taskIdInput;
-    if (input.duration) inputBody.duration = String(input.duration);
+    // Duration sadece Grok ve Sora 2 disindaki jobs modellerine gonder
+    if (input.duration && !isGrok && !isSora2) {
+      inputBody.duration = String(input.duration);
+    }
     if (input.language) inputBody.language = input.language;
     const body = { model: map.jobsModelId, input: inputBody };
     const data = await kieFetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
