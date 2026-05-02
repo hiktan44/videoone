@@ -51,9 +51,9 @@ function getProvider(): Provider {
   if (p === "openai") return "openai";
   if (p === "zai" || p === "z.ai" || p === "glm") return "zai";
   if (p === "kie") return "kie";
-  // Otomatik: env'lere göre — z.ai > kie > openai
-  if (process.env.ZAI_API_KEY) return "zai";
+  // Otomatik öncelik: kie (Gemini stabil) > zai > openai
   if (process.env.KIE_API_KEY) return "kie";
+  if (process.env.ZAI_API_KEY) return "zai";
   return "openai";
 }
 
