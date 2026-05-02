@@ -61,6 +61,7 @@ const config: Config = {
         "pulse-slow": "pulse 4s cubic-bezier(0.4,0,0.6,1) infinite",
         "shimmer": "shimmer 2s linear infinite",
         "float": "float 6s ease-in-out infinite",
+        "marquee": "marquee 35s linear infinite",
       },
       keyframes: {
         "gradient-shift": {
@@ -73,7 +74,11 @@ const config: Config = {
         },
         "float": {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-8px)" },
+          "50%": { transform: "translateY(-20px)" },
+        },
+        "marquee": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
         },
       },
       boxShadow: {
