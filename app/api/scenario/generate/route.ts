@@ -5,10 +5,8 @@ import {
 
 export const runtime = "nodejs";
 
-// OpenAI ChatGPT (gpt-5 / gpt-5.5) ile senaryo uretimi.
-// Endpoint: https://api.openai.com/v1/chat/completions
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5";
+// LLM ile senaryo üretimi — varsayılan Kie.ai (Gemini 3.1 Pro), OpenAI fallback
+import { chatCompletion } from "@/lib/llm";
 
 const SYSTEM_PROMPT = `You are a professional cinematic storyboard writer for short-form AI video. The user gives you a topic in Turkish and a target total duration. You MUST analyze the topic deeply and design a connected, emotionally engaging multi-scene storyboard. NEVER simply repeat or copy the user's topic into each scene — instead break it into a narrative arc.
 
@@ -70,7 +68,6 @@ function clampDuration(d: number, max: number): number {
 }
 
 async function callOpenAI(input: GenInput): Promise<{ scenes?: Scene[]; error?: string }> {
-  if (!process.env.OPENAI_API_KEY) return { error: "OPENAI_API_KEY tanımlı değil" };
   try {
     const userPrompt = `Topic (in Turkish): ${input.topic}
 Target total duration: ${input.totalDurationSec} seconds
@@ -78,64 +75,18 @@ Per-scene maximum: ${input.perSceneMaxSec} seconds
 Suggested scene count: ${Math.max(3, Math.ceil(input.totalDurationSec / input.perSceneMaxSec))}
 Title language: ${input.language || "Türkçe"}
 
-Design the storyboard now. Return JSON only.`;
+Design the storyboard now. Return STRICT JSON only with shape: {"scenes":[{"title":"","prompt":"","durationSec":5,"cameraAngle":"wide-establishing","transitionAfter":"smooth-fade"}]}`;
 
-    const body = {
-      model: OPENAI_MODEL,
+    const result = await chatCompletion({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.85,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "storyboard",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              scenes: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    title: { type: "string" },
-                    prompt: { type: "string" },
-                    durationSec: { type: "integer" },
-                    cameraAngle: { type: "string" },
-                    transitionAfter: { type: "string" },
-                  },
-                  required: ["title", "prompt", "durationSec", "cameraAngle", "transitionAfter"],
-                  additionalProperties: false,
-                },
-              },
-            },
-            required: ["scenes"],
-            additionalProperties: false,
-          },
-        },
-      },
-    };
-
-    const res = await fetch(OPENAI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
     });
 
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      return { error: `OpenAI HTTP ${res.status}: ${txt.slice(0, 200)}` };
-    }
-
-    const data = await res.json();
-    const content: string = data?.choices?.[0]?.message?.content || "";
-
-    if (!content) return { error: "OpenAI boş yanıt döndü" };
+    const content = result.content || "";
+    if (!content) return { error: "LLM boş yanıt döndü" };
 
     let parsed: any;
     try {
