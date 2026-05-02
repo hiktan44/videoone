@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Sparkles, ExternalLink, FilmIcon } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Sparkles, ExternalLink, FilmIcon, Download } from "lucide-react";
 import clsx from "clsx";
 import { useStore, type GenerationJob } from "@/lib/store";
 import { JobPollingSubscriber } from "./JobPollingSubscriber";
@@ -138,23 +138,32 @@ export function GenerationPanel() {
                     </div>
                   )}
                   {job.status === "succeeded" && job.resultUrl && (
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => openInEditor(job)}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-gradient-vibe rounded px-2 py-0.5 hover:opacity-90"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-gradient-vibe rounded px-2 py-1 hover:opacity-90"
                       >
                         <FilmIcon className="h-3 w-3" />
                         Editörde Aç
                       </button>
                       <a
                         href={job.resultUrl}
+                        download={`vibe-${job.id.slice(0, 8)}.mp4`}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold rounded border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 px-2 py-1 transition-colors"
+                        title="MP4 indir"
+                      >
+                        <Download className="h-3 w-3" />
+                        İndir
+                      </a>
+                      <a
+                        href={job.resultUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] text-purple-300 hover:text-purple-200"
+                        title="Yeni sekmede aç"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Aç
                       </a>
                     </div>
                   )}

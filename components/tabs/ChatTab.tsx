@@ -27,11 +27,125 @@ const FALLBACK_QUICK_ACTIONS = [
 
 export function ChatTab() {
   const projectId = useStore((s) => s.projectId);
+  const settings = useStore((s) => s.settings);
+  const addJob = useStore((s) => s.addJob);
+  const updateJob = useStore((s) => s.updateJob);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const dispatchedToolsRef = useRef<Set<string>>(new Set());
+
+  // Tool→action bridge: AI bir tool çağrısı yaptığında gerçek API'yi tetikle
+  const dispatchToolCall = useCallback(
+    async (msgId: string, tool: ToolCall) => {
+      const key = `${msgId}::${tool.name}`;
+      if (dispatchedToolsRef.current.has(key)) return;
+      dispatchedToolsRef.current.add(key);
+
+      // 1) start_generation veya regenerate_scene → gerçek video üretimi tetikle
+      if (tool.name === "start_generation" || tool.name === "regenerate_scene") {
+        const args = tool.args || {};
+        const prompt = String(
+          (args as any).newPrompt ||
+            (args as any).prompt ||
+            (args as any).topic ||
+            "Video sahnesi"
+        );
+        const aspectRatio = String((args as any).aspectRatio || settings.aspectRatio || "16:9");
+        const duration = Number((args as any).durationSec || settings.videoDuration || 5);
+
+        // Job'ı queue'ya ekle (running)
+        const jobId = addJob({
+          kind: "video",
+          prompt,
+          status: "running",
+        });
+
+        try {
+          const res = await fetch("/api/kie/video", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt,
+              model: settings.videoModel,
+              aspect_ratio: aspectRatio,
+              duration,
+              resolution: settings.videoResolution,
+            }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            taskId?: string;
+            status?: string;
+            family?: string;
+            resultUrl?: string;
+            error?: string;
+          };
+
+          if (!res.ok || !data.taskId || data.taskId === "error") {
+            updateJob(jobId, {
+              status: "failed",
+              error: data.error || `Üretim başarısız (${res.status})`,
+            });
+            return;
+          }
+
+          updateJob(jobId, {
+            taskId: data.taskId,
+            status: "running",
+            family: data.family,
+            resultUrl: data.resultUrl,
+          });
+          // JobPollingSubscriber GenerationPanel içinden polling başlatır,
+          // succeeded olunca timeline'a klip ekler.
+        } catch (e) {
+          updateJob(jobId, {
+            status: "failed",
+            error: e instanceof Error ? e.message : "Network hatası",
+          });
+        }
+        return;
+      }
+
+      // 2) update_setting → store ayarını değiştir
+      if (tool.name === "update_setting") {
+        const args = tool.args || {};
+        const key = String((args as any).key || "");
+        const value = (args as any).value;
+        if (key && value !== undefined) {
+          // Yalnızca tanıdığımız anahtarlar:
+          const map: Record<string, keyof typeof settings> = {
+            voice: "voiceModel",
+            music: "musicModel",
+            language: "language",
+            globalStyle: "globalStyle",
+            pace: "videoDuration",
+          };
+          const settingKey = map[key];
+          if (settingKey) {
+            useStore.getState().updateSetting(settingKey, value as any);
+          }
+        }
+        return;
+      }
+    },
+    [addJob, updateJob, settings]
+  );
+
+  // Yeni mesajlardaki tool call'ları dispatch et
+  useEffect(() => {
+    for (const m of messages) {
+      if (m.streaming) continue; // henüz tamamlanmadı
+      if (m.role !== "assistant") continue;
+      if (!m.toolCalls || m.toolCalls.length === 0) continue;
+      for (const tc of m.toolCalls) {
+        // propose_storyboard ve select_quick_reply UI'da gösterildiğinden dispatch etme
+        if (tc.name === "propose_storyboard" || tc.name === "select_quick_reply") continue;
+        void dispatchToolCall(m.id, tc);
+      }
+    }
+  }, [messages, dispatchToolCall]);
 
   // Geçmişi yükle (DB'den) — yalnızca cuid (DB) projeler için
   useEffect(() => {
