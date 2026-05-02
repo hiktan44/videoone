@@ -23,24 +23,39 @@ import clsx from "clsx";
 const tiers = [
   {
     icon: Zap,
-    iconColor: "text-amber-400",
     title: "Hızlı",
     desc: "~18 kredi/dk",
     sub: "Hızlı sonuç, taslak çekimler",
+    // Sarı tema
+    bg: "bg-gradient-to-br from-amber-400/15 to-amber-500/5",
+    ring: "ring-amber-400/40",
+    iconColor: "text-amber-500",
+    titleColor: "text-amber-600 dark:text-amber-400",
+    hover: "hover:from-amber-400/25 hover:to-amber-500/10 hover:ring-amber-400/60",
   },
   {
     icon: Trophy,
-    iconColor: "text-cyan-400",
     title: "Pro",
     desc: "~190 kredi/dk",
     sub: "Yüksek kalite, sosyal medya",
+    // Lacivert tema
+    bg: "bg-gradient-to-br from-indigo-500/15 to-blue-600/5",
+    ring: "ring-indigo-500/40",
+    iconColor: "text-indigo-500",
+    titleColor: "text-indigo-600 dark:text-indigo-300",
+    hover: "hover:from-indigo-500/25 hover:to-blue-600/10 hover:ring-indigo-500/60",
   },
   {
     icon: Sparkles,
-    iconColor: "text-coral-400",
     title: "Max",
     desc: "~600 kredi/dk",
     sub: "Sinematik kalite, müşteri sunumu",
+    // Kırmızı/turuncu tema
+    bg: "bg-gradient-to-br from-rose-500/15 to-orange-500/5",
+    ring: "ring-rose-500/40",
+    iconColor: "text-rose-500",
+    titleColor: "text-rose-600 dark:text-rose-300",
+    hover: "hover:from-rose-500/25 hover:to-orange-500/10 hover:ring-rose-500/60",
   },
 ];
 
@@ -123,14 +138,19 @@ export default function HomePage() {
                 <button
                   key={t.title}
                   type="button"
-                  className="text-left rounded-xl border border-ink-700 bg-ink-900/50 hover:bg-ink-900 hover:border-ink-600 p-4 transition-colors"
+                  className={clsx(
+                    "text-left rounded-xl ring-1 p-4 transition-all hover:-translate-y-0.5",
+                    t.bg,
+                    t.ring,
+                    t.hover
+                  )}
                 >
                   <div className="flex items-center gap-2">
-                    <t.icon className={clsx("h-4 w-4", t.iconColor)} />
-                    <div className="text-sm font-semibold text-ink-50">{t.title}</div>
-                    <div className="text-[11px] text-ink-400">{t.desc}</div>
+                    <t.icon className={clsx("h-5 w-5", t.iconColor)} strokeWidth={2.4} />
+                    <div className={clsx("text-base font-bold", t.titleColor)}>{t.title}</div>
+                    <div className="text-[11px] text-ink-400 ml-auto font-medium">{t.desc}</div>
                   </div>
-                  <div className="text-xs text-ink-400 mt-1.5">{t.sub}</div>
+                  <div className="text-xs text-ink-300 mt-1.5">{t.sub}</div>
                 </button>
               ))}
             </div>

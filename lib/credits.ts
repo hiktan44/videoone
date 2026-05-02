@@ -95,16 +95,28 @@ export async function refundCredits(
 }
 
 /**
- * Üretim tipi + süre + plan tier'a göre maliyet hesabı.
- * PRD'de:
- *  Fast: ~18 kredi/dk
- *  Pro:  ~190 kredi/dk
- *  Max:  ~600 kredi/dk
+ * Üretim tipi + süre + plan tier + çözünürlüğe göre maliyet hesabı.
+ * Tier:  Fast ~18 / Pro ~190 / Max ~600 kredi/dk
+ * Resolution çarpanları: 720p=1x, 1080p=1.6x, 4K=3x
  */
+const RESOLUTION_MULTIPLIER: Record<string, number> = {
+  "720p": 1,
+  "1080p": 1.6,
+  "1440p": 2.2,
+  "2K": 2.2,
+  "4K": 3,
+};
+
+export function resolutionMultiplier(res?: string): number {
+  if (!res) return 1;
+  return RESOLUTION_MULTIPLIER[res] ?? 1;
+}
+
 export function estimateCost(
   kind: "video" | "image" | "voice" | "music" | "captions",
   durationSec: number = 5,
-  tier: "fast" | "pro" | "max" = "pro"
+  tier: "fast" | "pro" | "max" = "pro",
+  resolution?: string
 ): number {
   const perMinute: Record<string, Record<string, number>> = {
     video: { fast: 18, pro: 190, max: 600 },
@@ -115,5 +127,8 @@ export function estimateCost(
   };
   const rate = perMinute[kind]?.[tier] ?? 50;
   const minutes = Math.max(0.1, durationSec / 60);
-  return Math.ceil(rate * minutes);
+  // Çözünürlük çarpanı sadece video ve image için anlamlı
+  const mult =
+    kind === "video" || kind === "image" ? resolutionMultiplier(resolution) : 1;
+  return Math.ceil(rate * minutes * mult);
 }

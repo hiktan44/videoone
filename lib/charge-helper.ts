@@ -18,13 +18,14 @@ export async function chargeForGeneration(opts: {
   kind: "image" | "video" | "voice" | "music" | "captions";
   durationSec?: number;
   modelDisplayName?: string;
+  resolution?: string;
 }): Promise<ChargeContext> {
   const user = await getCurrentUser();
   if (!user) {
     return { userId: null, amount: 0, refund: async () => {} };
   }
   const tier = (user.plan as "fast" | "pro" | "max") || "pro";
-  const amount = estimateCost(opts.kind, opts.durationSec || 5, tier);
+  const amount = estimateCost(opts.kind, opts.durationSec || 5, tier, opts.resolution);
   await chargeCredits({
     userId: user.id,
     amount,

@@ -179,7 +179,7 @@ export function defaultSettings(): Settings {
     language: "Türkçe",
     aspectRatio: "16:9",
     videoDuration: 5,
-    videoResolution: "1080p",
+    videoResolution: "720p",
     waveform: "Sadece Aktif",
     globalStyleEnabled: false,
     globalStyle: "Sinematik tonlar, sıcak ışıklandırma, Türk kültürüne uygun estetik.",

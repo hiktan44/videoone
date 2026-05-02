@@ -24,13 +24,13 @@
 
 html.light {
   color-scheme: light;
-  --bg: #fafafa;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --border: #e4e4e7;
+  --surface-2: #f9fafb;
+  --border: #e5e7eb;
   --text: #0a0a0b;
-  --text-muted: #52525b;
-  --text-faint: #a1a1aa;
+  --text-muted: #374151;
+  --text-faint: #4b5563;
 }
 
 /* ink-* utility'lerini CSS var'larina map et — light tema icin override */
@@ -42,6 +42,9 @@ html.light .bg-ink-900\/80,
 html.light .bg-ink-900\/95 { background-color: var(--surface) !important; }
 html.light .bg-ink-800,
 html.light .bg-ink-800\/60 { background-color: var(--surface-2) !important; }
+html.light .bg-ink-700,
+html.light .bg-ink-700\/60 { background-color: var(--surface-2) !important; }
+html.light .bg-ink-600 { background-color: #e5e7eb !important; }
 
 html.light .text-ink-50,
 html.light .text-ink-100 { color: var(--text) !important; }

@@ -21,6 +21,8 @@ export async function POST(req: Request) {
     const aspect_ratio: string | undefined = body?.aspect_ratio || body?.aspectRatio;
     const duration: number | undefined =
       typeof body?.duration === "number" ? body.duration : undefined;
+    const resolution: string | undefined =
+      typeof body?.resolution === "string" ? body.resolution : undefined;
 
     const hasAnyInput =
       prompt ||
@@ -41,6 +43,7 @@ export async function POST(req: Request) {
         kind: "video",
         durationSec: duration || 5,
         modelDisplayName,
+        resolution,
       });
     } catch {
       return NextResponse.json(
