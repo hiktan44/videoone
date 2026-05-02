@@ -209,17 +209,24 @@ export const useStore = create<StoreState>((set, get) => ({
   setZoom: (pps) => set({ pixelsPerSecond: Math.max(20, Math.min(200, pps)) }),
 
   loadProject: (project) =>
-    set({
-      projectId: project.id,
-      currentProjectName: project.name,
-      chatMessages: project.chatMessages,
-      mediaItems: project.mediaItems,
-      characters: project.characters,
-      clips: project.clips,
-      settings: project.settings,
-      playhead: 0,
-      isPlaying: false,
-      selectedClipId: null,
+    set((state) => {
+      // Eğer aynı projeyi tekrar yüklüyorsak ve mevcut store'da daha çok klip varsa
+      // (pipeline arka planda eklemiş), DB'den gelen boş listeyle EZME.
+      const sameProject = state.projectId === project.id;
+      const dbHasFewer = (project.clips?.length ?? 0) < state.clips.length;
+      const keepClips = sameProject && dbHasFewer;
+      return {
+        projectId: project.id,
+        currentProjectName: project.name,
+        chatMessages: project.chatMessages,
+        mediaItems: project.mediaItems,
+        characters: keepClips ? state.characters : project.characters,
+        clips: keepClips ? state.clips : project.clips,
+        settings: project.settings,
+        playhead: 0,
+        isPlaying: false,
+        selectedClipId: null,
+      };
     }),
 
   exportCurrentAsProject: () => {
