@@ -29,9 +29,9 @@ export function BrandKitEditor() {
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [uploading, setUploading] = useState<"logo" | "intro" | "outro" | null>(null);
-  const fileInput = useRef<HTMLInputElement | null>(null);
-  const introInput = useRef<HTMLInputElement | null>(null);
-  const outroInput = useRef<HTMLInputElement | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const introInput = useRef<HTMLInputElement>(null);
+  const outroInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/brand-kit")
@@ -317,7 +317,7 @@ function VideoSlot({
 }: {
   label: string; url?: string; uploading: boolean;
   onUpload: () => void; onRemove: () => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   onFile: (f: File) => void;
 }) {
   return (
