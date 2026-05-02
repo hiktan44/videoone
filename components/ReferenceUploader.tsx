@@ -24,7 +24,7 @@ const ACCEPT_MAP: Record<RefKind, string> = {
 const MAX_BYTES_MAP: Record<RefKind, number> = {
   image: 30 * 1024 * 1024,   // 30 MB
   audio: 50 * 1024 * 1024,   // 50 MB
-  video: 100 * 1024 * 1024,  // 100 MB (Kie sınırı)
+  video: 100 * 1024 * 1024,  // 100 MB
 };
 
 const LABEL_MAP: Record<RefKind, { tr: string; placeholder: string; ctaIcon: string }> = {
@@ -226,7 +226,7 @@ export function ReferenceUploader({ kind, refs, onChange, max = 4, compact = fal
 
       {!compact && refs.length === 0 ? (
         <div className="mt-2 text-[11px] text-zinc-500 text-center">
-          {label.placeholder}. Kie.ai geçici olarak 3 gün saklar.
+          {label.placeholder}. Yüklenen dosyalar 3 gün saklanır.
         </div>
       ) : null}
 

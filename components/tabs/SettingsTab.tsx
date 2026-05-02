@@ -157,7 +157,7 @@ export function SettingsTab() {
       </FieldRow>
 
       <div className="text-[10px] text-zinc-500 pt-2 border-t border-zinc-900">
-        Toplam {KIE_CATALOG.length} Kie.ai modeli yüklendi.
+        Toplam {KIE_CATALOG.length} AI modeli yüklendi.
       </div>
     </div>
   );

@@ -9,6 +9,7 @@
 
 const KIE_BASE = "https://api.kie.ai";
 const OPENAI_BASE = "https://api.openai.com/v1";
+const ZAI_BASE = "https://api.z.ai/api/paas/v4";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant" | "tool";
@@ -43,15 +44,50 @@ export type ChatResponse = {
   toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
 };
 
-function getProvider(): "kie" | "openai" {
+type Provider = "kie" | "openai" | "zai";
+
+function getProvider(): Provider {
   const p = (process.env.LLM_PROVIDER || "").toLowerCase();
   if (p === "openai") return "openai";
-  // Kie default cunku kullanici zaten Kie kredisi
-  return process.env.KIE_API_KEY ? "kie" : "openai";
+  if (p === "zai" || p === "z.ai" || p === "glm") return "zai";
+  if (p === "kie") return "kie";
+  // Otomatik: env'lere göre — z.ai > kie > openai
+  if (process.env.ZAI_API_KEY) return "zai";
+  if (process.env.KIE_API_KEY) return "kie";
+  return "openai";
 }
 
+function getApiKey(provider: Provider): string | undefined {
+  if (provider === "zai") return process.env.ZAI_API_KEY;
+  if (provider === "kie") return process.env.KIE_API_KEY;
+  return process.env.OPENAI_API_KEY;
+}
+
+function getEndpoint(provider: Provider, model: string): string {
+  if (provider === "zai") return `${ZAI_BASE}/chat/completions`;
+  if (provider === "kie") return kieUrl(model);
+  return `${OPENAI_BASE}/chat/completions`;
+}
+
+// Provider bazli fallback chain
+const FALLBACKS: Record<Provider, string[]> = {
+  kie: ["gemini-3-pro", "gemini-2.5-pro", "gpt-5-2", "claude-sonnet-4-6"],
+  zai: ["glm-4.6", "glm-4.5-air", "glm-4.5"], // z.ai GLM modelleri
+  openai: ["gpt-4o", "gpt-4o-mini"],
+};
+
 function getModel(): string {
-  return process.env.LLM_MODEL || "gemini-3.1-pro";
+  if (process.env.LLM_MODEL) return process.env.LLM_MODEL;
+  const provider = getProvider();
+  return FALLBACKS[provider][0];
+}
+
+function getModelChain(): string[] {
+  const provider = getProvider();
+  const primary = process.env.LLM_MODEL;
+  const list = FALLBACKS[provider];
+  if (primary) return [primary, ...list.filter((m) => m !== primary)];
+  return list;
 }
 
 /** Model adina gore Kie endpoint URL'sini doner. */
@@ -60,20 +96,13 @@ function kieUrl(model: string): string {
   return `${KIE_BASE}/${model}/v1/chat/completions`;
 }
 
-export async function chatCompletion(req: ChatRequest): Promise<ChatResponse> {
-  const provider = getProvider();
-  const model = getModel();
-
-  const apiKey = provider === "kie" ? process.env.KIE_API_KEY : process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      provider === "kie"
-        ? "KIE_API_KEY tanimli degil"
-        : "OPENAI_API_KEY tanimli degil"
-    );
-  }
-  const url = provider === "kie" ? kieUrl(model) : `${OPENAI_BASE}/chat/completions`;
-
+async function callOnce(
+  provider: Provider,
+  model: string,
+  apiKey: string,
+  req: ChatRequest
+): Promise<{ ok: boolean; data?: any; error?: string; status?: number }> {
+  const url = getEndpoint(provider, model);
   const body: any = {
     model,
     messages: req.messages,
@@ -82,21 +111,63 @@ export async function chatCompletion(req: ChatRequest): Promise<ChatResponse> {
   if (req.tools && req.tools.length > 0) body.tools = req.tools;
   if (req.responseFormat) body.response_format = req.responseFormat;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      return { ok: false, error: `${provider}/${model} HTTP ${res.status}: ${txt.slice(0, 200)}`, status: res.status };
+    }
+    const data = await res.json();
+    // Kie body code != 200 olabilir
+    const code = data?.code;
+    if (code !== undefined && code !== 200 && code !== 0) {
+      return {
+        ok: false,
+        error: `${provider}/${model} code=${code}: ${data?.msg || data?.message || "?"}`,
+        status: 500,
+      };
+    }
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "network", status: 0 };
+  }
+}
 
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`LLM ${provider}/${model} HTTP ${res.status}: ${txt.slice(0, 300)}`);
+export async function chatCompletion(req: ChatRequest): Promise<ChatResponse> {
+  const provider = getProvider();
+  const apiKey = getApiKey(provider);
+  if (!apiKey) {
+    throw new Error(`${provider.toUpperCase()}_API_KEY tanımlı değil`);
   }
 
-  const data = await res.json();
+  const chain = getModelChain();
+  const errors: string[] = [];
+  let data: any = null;
+
+  for (const model of chain) {
+    const result = await callOnce(provider, model, apiKey, req);
+    if (result.ok) {
+      data = result.data;
+      break;
+    }
+    errors.push(result.error || "?");
+    // Sadece 5xx, 429 veya Kie maintenance gibi hatalarda fallback dene
+    // 4xx (bad request) için fallback anlamsız
+    if (result.status && result.status >= 400 && result.status < 500 && result.status !== 429) {
+      break;
+    }
+  }
+
+  if (!data) {
+    throw new Error(`Tüm LLM modelleri başarısız: ${errors.slice(0, 3).join(" | ")}`);
+  }
   // Kie bazen data.choices, bazen data.data.choices doner — defensif
   const choice = data?.choices?.[0]?.message || data?.data?.choices?.[0]?.message;
   if (!choice) {
@@ -115,41 +186,52 @@ export async function chatCompletion(req: ChatRequest): Promise<ChatResponse> {
   return { content, toolCalls };
 }
 
-/** Streaming chat completion — SSE chunk callback'li. */
+/** Streaming chat completion — SSE chunk callback'li. Fallback chain ile. */
 export async function chatCompletionStream(
   req: ChatRequest,
   onChunk: (event: "token" | "tool" | "done", data: any) => void
 ): Promise<void> {
   const provider = getProvider();
-  const model = getModel();
-  const apiKey = provider === "kie" ? process.env.KIE_API_KEY : process.env.OPENAI_API_KEY;
+  const apiKey = getApiKey(provider);
   if (!apiKey) {
-    throw new Error(
-      provider === "kie" ? "KIE_API_KEY tanimli degil" : "OPENAI_API_KEY tanimli degil"
-    );
+    throw new Error(`${provider.toUpperCase()}_API_KEY tanımlı değil`);
   }
-  const url = provider === "kie" ? kieUrl(model) : `${OPENAI_BASE}/chat/completions`;
 
-  const body: any = {
-    model,
-    messages: req.messages,
-    temperature: req.temperature ?? 0.7,
-    stream: true,
-  };
-  if (req.tools && req.tools.length > 0) body.tools = req.tools;
+  const chain = getModelChain();
+  const errors: string[] = [];
+  let res: Response | null = null;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  for (const model of chain) {
+    const url = getEndpoint(provider, model);
+    const body: any = {
+      model,
+      messages: req.messages,
+      temperature: req.temperature ?? 0.7,
+      stream: true,
+    };
+    if (req.tools && req.tools.length > 0) body.tools = req.tools;
 
-  if (!res.ok || !res.body) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`LLM stream ${res.status}: ${txt.slice(0, 200)}`);
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        errors.push(`${model} ${r.status}: ${txt.slice(0, 100)}`);
+        if (r.status >= 400 && r.status < 500 && r.status !== 429) break;
+        continue;
+      }
+      res = r;
+      break;
+    } catch (e) {
+      errors.push(`${model} network: ${e instanceof Error ? e.message : "?"}`);
+    }
+  }
+
+  if (!res || !res.body) {
+    throw new Error(`Stream başarısız: ${errors.slice(0, 3).join(" | ")}`);
   }
 
   const reader = res.body.getReader();

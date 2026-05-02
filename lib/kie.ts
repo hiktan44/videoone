@@ -37,10 +37,10 @@ function authHeaders(): Record<string, string> {
 
 function turkceHata(status: number, fallback?: string): string {
   if (status === 401) return "API anahtarı geçersiz veya yetkiniz yok.";
-  if (status === 402) return "Yetersiz kredi. Kie.ai panelinden bakiye yükleyin.";
-  if (status === 404) return "Kie.ai endpoint bulunamadı (model adı veya yol hatalı olabilir).";
+  if (status === 402) return "Yetersiz kredi. Plan yükselt veya bakiye ekle.";
+  if (status === 404) return "AI sağlayıcı endpoint bulunamadı (model adı veya yol hatalı olabilir).";
   if (status === 429) return "Çok fazla istek. Birkaç saniye bekleyip tekrar deneyin.";
-  if (status >= 500) return "Kie.ai sunucu hatası. Birkaç dakika sonra tekrar deneyin.";
+  if (status >= 500) return "AI sağlayıcı sunucu hatası. Birkaç dakika sonra tekrar deneyin.";
   return fallback || `Beklenmeyen hata (HTTP ${status})`;
 }
 
@@ -156,12 +156,12 @@ function checkKieCode(data: any): { ok: boolean; message?: string } {
   const msg = data.msg || data.message || data.error || `code ${code}`;
   let tr = String(msg);
   if (code === 401) tr = "API anahtarı geçersiz veya yetkiniz yok.";
-  else if (code === 402) tr = "Yetersiz kredi. Kie panelinden bakiye yükleyin.";
+  else if (code === 402) tr = "Yetersiz kredi. Plan yükselt veya bakiye ekle.";
   else if (code === 403) tr = `Erişim reddedildi: ${msg}`;
-  else if (code === 404) tr = "Kie endpoint bulunamadı (model adı veya yol hatalı olabilir).";
-  else if (code === 422) tr = `Kie isteği reddetti (422): ${msg}`;
+  else if (code === 404) tr = "AI sağlayıcı endpoint bulunamadı (model adı veya yol hatalı olabilir).";
+  else if (code === 422) tr = `Üretim isteği reddedildi (422): ${msg}`;
   else if (code === 429) tr = "Çok fazla istek, birkaç saniye bekleyin.";
-  else if (code >= 500) tr = `Kie sunucu hatası (${code}): ${msg}`;
+  else if (code >= 500) tr = `AI sağlayıcı sunucu hatası (${code}): ${msg}`;
   return { ok: false, message: tr };
 }
 
@@ -217,9 +217,9 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
         body: JSON.stringify(body),
       });
       const codeCheck = checkKieCode(data);
-      if (!codeCheck.ok) throw new Error(codeCheck.message || "Kie hata yanıtı");
+      if (!codeCheck.ok) throw new Error(codeCheck.message || "AI yanıt hatası");
       const taskId = extractTaskId(data?.data) || extractTaskId(data);
-      if (!taskId) throw new Error(`Kie yanıtında taskId bulunamadı. Yanıt: ${JSON.stringify(data).slice(0, 300)}`);
+      if (!taskId) throw new Error(`Sağlayıcı yanıtında taskId bulunamadı. Yanıt: ${JSON.stringify(data).slice(0, 300)}`);
       return { taskId, status: "running", family: "veo" };
     }
 
@@ -236,9 +236,9 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
         body: JSON.stringify(body),
       });
       const codeCheck = checkKieCode(data);
-      if (!codeCheck.ok) throw new Error(codeCheck.message || "Kie hata yanıtı");
+      if (!codeCheck.ok) throw new Error(codeCheck.message || "AI yanıt hatası");
       const taskId = extractTaskId(data?.data) || extractTaskId(data);
-      if (!taskId) throw new Error(`Kie yanıtında taskId bulunamadı. Yanıt: ${JSON.stringify(data).slice(0, 300)}`);
+      if (!taskId) throw new Error(`Sağlayıcı yanıtında taskId bulunamadı. Yanıt: ${JSON.stringify(data).slice(0, 300)}`);
       return { taskId, status: "running", family: "gpt4o" };
     }
 
@@ -314,12 +314,12 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
       body: JSON.stringify(body),
     });
     const codeCheck = checkKieCode(data);
-    if (!codeCheck.ok) throw new Error(codeCheck.message || "Kie hata yanıtı");
+    if (!codeCheck.ok) throw new Error(codeCheck.message || "AI yanıt hatası");
     const taskId = extractTaskId(data?.data) || extractTaskId(data);
     if (!taskId) {
       // Bilgilendirme: model id veya body sema sorunlu olabilir
       throw new Error(
-        `Kie yanıtında taskId bulunamadı. Model: "${map.jobsModelId}". Yanıt: ${JSON.stringify(data).slice(0, 300)}`
+        `Sağlayıcı yanıtında taskId bulunamadı. Model: "${map.jobsModelId}". Yanıt: ${JSON.stringify(data).slice(0, 300)}`
       );
     }
     return { taskId, status: "running", family: map.family };

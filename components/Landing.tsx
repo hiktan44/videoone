@@ -111,7 +111,7 @@ const faqs = [
   },
   {
     q: "Hangi AI modellerini kullanıyor?",
-    a: "Görsel için Flux, Seedream, Imagen 4. Video için Veo 3.1, Kling 3.0, Seedance, Sora 2, Hailuo. Ses için ElevenLabs, InWorld. Müzik için Suno V5. Hepsi tek API anahtarı ile (Kie.ai).",
+    a: "Görsel için Flux, Seedream, Imagen 4. Video için Veo 3.1, Kling 3.0, Seedance, Sora 2, Hailuo. Ses için ElevenLabs, InWorld. Müzik için Suno V5. Hepsi tek arayüzde, tek tıkla.",
   },
   {
     q: "Krediler nasıl harcanıyor?",

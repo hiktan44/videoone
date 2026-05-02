@@ -226,7 +226,7 @@ export function HeroPrompt() {
             data.error ??
             (res.status === 401 ? "API anahtarı geçersiz"
             : res.status === 429 ? "Çok fazla istek"
-            : res.status >= 500 ? "Kie.ai sunucu hatası"
+            : res.status >= 500 ? "AI sağlayıcı sunucu hatası"
             : "Üretim başlatılamadı.");
           updateJob(jobId, { status: "failed", error: msg });
           setUiError(msg);
@@ -337,7 +337,7 @@ export function HeroPrompt() {
 
       {mode === "video" ? (
         <div className="mt-2 text-[11px] text-zinc-500 px-1">
-          💡 Tek seferlik üretim sınırı modele göre değişir: çoğu Kie modeli <strong className="text-zinc-300">5-10 sn</strong>,
+          💡 Tek seferlik üretim sınırı modele göre değişir: çoğu model <strong className="text-zinc-300">5-10 sn</strong>,
           <strong className="text-zinc-300"> Kling 3.0 Pro</strong> ve <strong className="text-zinc-300">Seedance 2.0</strong> ailesi
           15 sn'ye kadar destekler. Daha uzun video için <strong className="text-zinc-300">"Video — Uzatma"</strong> kategorisindeki
           modellerle (Veo Extend, Wan Extend, Grok Extend) peş peşe ekleyerek dakika seviyesine çıkabilirsiniz.

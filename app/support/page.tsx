@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     q: "Ürettiğim videolar nerede saklanıyor?",
-    a: "Otomatik olarak Cloudflare R2'ye yedekleniyor. Kie.ai 14 gün sonra orijinal dosyayı silse bile bizdeki kopyaya MediaAsset üzerinden ulaşabilirsin.",
+    a: "Üretilen tüm asset'ler otomatik olarak Cloudflare R2'ye yedekleniyor — kalıcı saklama, 14 gün sonra dahi MediaAsset üzerinden erişebilirsin.",
   },
   {
     q: "Plan yükseltirsem eski kredilerim gider mi?",
