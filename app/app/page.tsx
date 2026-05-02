@@ -139,7 +139,7 @@ export default function HomePage() {
                   key={t.title}
                   type="button"
                   className={clsx(
-                    "text-left rounded-xl ring-1 p-4 transition-all hover:-translate-y-0.5",
+                    "tier-card text-left rounded-xl ring-1 p-4 transition-all hover:-translate-y-0.5",
                     t.bg,
                     t.ring,
                     t.hover

@@ -82,7 +82,7 @@ export function Dropdown({
       {open ? (
         <div
           className={clsx(
-            "absolute z-50 mt-2 min-w-[260px] rounded-lg border border-zinc-800 bg-zinc-950 shadow-xl shadow-black/50 max-h-[360px] overflow-hidden flex flex-col",
+            "absolute z-[100] mt-2 min-w-[260px] rounded-lg border border-zinc-800 bg-zinc-950 shadow-xl shadow-black/50 max-h-[360px] overflow-hidden flex flex-col",
             align === "right" ? "right-0" : "left-0"
           )}
         >

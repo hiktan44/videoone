@@ -77,6 +77,41 @@ html.light .bg-zinc-800\/60,
 html.light .bg-zinc-800\/80 { background-color: var(--surface-2) !important; }
 html.light .bg-zinc-700,
 html.light .bg-zinc-700\/60 { background-color: #e4e4e7 !important; }
+html.light .bg-zinc-900\/70,
+html.light .bg-zinc-900\/30 { background-color: var(--surface) !important; }
+html.light .bg-zinc-800\/80,
+html.light .bg-zinc-800\/30 { background-color: var(--surface-2) !important; }
+
+/* Mor/purple highlights -> light tema icin solgun mor */
+html.light .bg-purple-500\/5,
+html.light .bg-purple-500\/10,
+html.light .bg-purple-500\/15,
+html.light .bg-purple-500\/20 { background-color: rgba(168, 85, 247, 0.06) !important; }
+html.light .text-purple-200,
+html.light .text-purple-300 { color: #6d28d9 !important; }
+html.light .text-purple-400 { color: #7c3aed !important; }
+html.light .border-purple-500\/30,
+html.light .border-purple-500\/40 { border-color: #c4b5fd !important; }
+
+/* Amber highlights -> light tema okunabilir */
+html.light .text-amber-200,
+html.light .text-amber-300 { color: #b45309 !important; }
+html.light .text-amber-400 { color: #d97706 !important; }
+html.light .bg-amber-500\/5,
+html.light .bg-amber-500\/10,
+html.light .bg-amber-500\/15 { background-color: rgba(245, 158, 11, 0.08) !important; }
+
+/* Cyan/Coral text light tema */
+html.light .text-cyan-300 { color: #0e7490 !important; }
+html.light .text-cyan-400 { color: #0891b2 !important; }
+html.light .text-coral-300,
+html.light .text-coral-400 { color: #be123c !important; }
+
+/* Tier kartlar transform stacking context'ini kir — dropdown'un altinda kalmasinlar */
+.tier-card {
+  position: relative;
+  z-index: 0;
+}
 
 html.light .text-white,
 html.light .text-zinc-50,
