@@ -198,9 +198,30 @@ export type CreateInput = {
   language?: string;
 };
 
+// Video uretimine eklenen ek talimat — model uzerinde Turkce yazi/ses sorununu engellemek icin.
+// Sahnede HIC yazi, alt yazi, logo, konusma, anlatim, ses olmasin. Hepsi editorden eklenecek.
+const SILENT_VISUAL_SUFFIX =
+  ", no text on screen, no captions, no subtitles, no logos, no watermarks, no speech, no narration, no dialogue, completely silent, no audio, no music, no on-screen writing in any language";
+
+function applyNegativePrompt(prompt: string, kind: string): string {
+  if (kind !== "video" && kind !== "image") return prompt;
+  // Lipsync ailesi icin ses lazim — suffix ekleme
+  return prompt + SILENT_VISUAL_SUFFIX;
+}
+
 export async function createTask(input: CreateInput): Promise<KieTask> {
   const map = getMapping(input.modelDisplayName);
   if (!hasKey()) return mockResponse(map.kind, input.prompt, map.family);
+
+  // Lipsync VE ses gerekn endpointler haric, video promptlarina sessiz/yazisiz ekle
+  const isLipsyncOrAudio =
+    map.jobsModelId?.includes("lipsync") ||
+    map.jobsModelId?.includes("ai-avatar") ||
+    map.jobsModelId?.includes("speech-to-video") ||
+    map.jobsModelId?.includes("infinitalk");
+  if (!isLipsyncOrAudio) {
+    input = { ...input, prompt: applyNegativePrompt(input.prompt, map.kind) };
+  }
 
   try {
     if (map.family === "veo") {
