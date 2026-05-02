@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
-import { ArrowLeft, HelpCircle, Sparkles, Download, Upload, Film } from "lucide-react";
+import { ArrowLeft, HelpCircle, Sparkles, Download, Upload, Film, Globe, Loader2, Check } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { AutoSaver } from "@/components/AutoSaver";
 import { ExportModal } from "@/components/ExportModal";
@@ -23,7 +23,41 @@ export function EditorTopBar() {
   const exportCurrentAsProject = useStore((s) => s.exportCurrentAsProject);
   const [editing, setEditing] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<{ ok: boolean; url?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const projectId = useStore((s) => s.projectId);
+
+  const handlePublish = async () => {
+    if (!projectId) {
+      setPublishStatus({ ok: false });
+      return;
+    }
+    setPublishing(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.publicUrl) {
+        const fullUrl = window.location.origin + data.publicUrl;
+        setPublishStatus({ ok: true, url: fullUrl });
+        try {
+          await navigator.clipboard.writeText(fullUrl);
+        } catch {}
+      } else {
+        setPublishStatus({ ok: false });
+        alert(data.error || "Yayınlama başarısız");
+      }
+    } catch (e) {
+      setPublishStatus({ ok: false });
+    } finally {
+      setPublishing(false);
+      setTimeout(() => setPublishStatus(null), 4000);
+    }
+  };
 
   const handleExport = () => {
     try {
@@ -103,6 +137,21 @@ export function EditorTopBar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <button
+          onClick={handlePublish}
+          disabled={publishing}
+          title={publishStatus?.ok ? "Link kopyalandı" : "Public kanala yayınla"}
+          className="inline-flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 transition-colors disabled:opacity-50"
+        >
+          {publishing ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : publishStatus?.ok ? (
+            <Check className="h-3.5 w-3.5" />
+          ) : (
+            <Globe className="h-3.5 w-3.5" />
+          )}
+          {publishStatus?.ok ? "Link kopyalandı" : "Yayınla"}
+        </button>
         <button
           onClick={() => setExportOpen(true)}
           title="MP4 olarak dışa aktar"

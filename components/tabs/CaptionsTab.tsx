@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { clipsToSrt, downloadAsFile } from "@/lib/srt";
 import { SubtitleEditor } from "@/components/SubtitleEditor";
-import { Download, Loader2, Sparkles, Volume2 } from "lucide-react";
+import { Download, Loader2, Sparkles, Volume2, Mic } from "lucide-react";
 import clsx from "clsx";
 
 // chatMessages'tan basit cümle ayırıcı — nokta, ünlem, soru işareti.
@@ -27,7 +27,60 @@ export function CaptionsTab() {
 
   const [generating, setGenerating] = useState(false);
   const [voicing, setVoicing] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  const audioClips = useMemo(
+    () => clips.filter((c) => c.trackId === "audio" && c.sourceUrl),
+    [clips]
+  );
+
+  // Whisper ile audio'yu sesten transkripte et
+  async function handleWhisperTranscribe() {
+    const targetClip = audioClips[0];
+    if (!targetClip?.sourceUrl) {
+      setStatus("Önce timeline'a bir ses klibi ekleyin (Tümünü Seslendir veya yükleyin).");
+      return;
+    }
+    setTranscribing(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/captions/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audioUrl: targetClip.sourceUrl, language: "tr" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus(data.error || `Transkripsiyon hatası ${res.status}`);
+        return;
+      }
+      const items: Array<{ start: number; end: number; text: string }> = data.items || [];
+      if (items.length === 0) {
+        setStatus("Transkript boş döndü.");
+        return;
+      }
+      // Mevcut subtitle'ları temizle
+      for (const c of subtitleClips) removeClip(c.id);
+      // Yeni transkriptlerle doldur
+      for (const it of items) {
+        const dur = Math.max(1, it.end - it.start);
+        addClip({
+          trackId: "subtitle",
+          label: "Altyazı",
+          text: it.text,
+          startTime: targetClip.startTime + it.start,
+          duration: dur,
+          gradient: "from-cyan-400 to-amber-500",
+        });
+      }
+      setStatus(`✓ ${items.length} altyazı segmenti üretildi.`);
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Transkripsiyon başarısız");
+    } finally {
+      setTranscribing(false);
+    }
+  }
 
   const subtitleClips = useMemo(
     () =>
@@ -170,6 +223,20 @@ export function CaptionsTab() {
 
       {/* Aksiyon butonları */}
       <div className="grid grid-cols-1 gap-2">
+        <button
+          onClick={handleWhisperTranscribe}
+          disabled={transcribing || audioClips.length === 0}
+          className="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-2 text-sm text-amber-200 font-medium transition-colors"
+          title={audioClips.length === 0 ? "Önce timeline'a bir ses klibi ekle" : ""}
+        >
+          {transcribing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Mic className="h-4 w-4 text-amber-400" />
+          )}
+          Sesten Whisper ile Üret
+        </button>
+
         <button
           onClick={handleAutoGenerate}
           disabled={generating}

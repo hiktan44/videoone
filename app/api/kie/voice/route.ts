@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { chargeForGeneration } from "@/lib/charge-helper";
 
 // Kie.ai ses üretimi uç noktası.
 // KIE_API_KEY yoksa mock yanıt döner (geliştirme için).
@@ -12,6 +13,22 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Seslendirilecek metin boş olamaz" },
       { status: 400 }
+    );
+  }
+
+  // Kredi düşürme — text uzunluğuna göre tahmini süre (~150 wpm)
+  const estimatedDur = Math.max(3, text.split(/\s+/).length / 2.5);
+  let charge;
+  try {
+    charge = await chargeForGeneration({
+      kind: "voice",
+      durationSec: estimatedDur,
+      modelDisplayName: voiceModel,
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Yetersiz kredi. Lütfen plan yükselt veya bekle." },
+      { status: 402 }
     );
   }
 
@@ -40,6 +57,7 @@ export async function POST(req: Request) {
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
+      await charge.refund();
       return NextResponse.json(
         { error: `Ses üretimi başarısız: ${res.status} ${errText}` },
         { status: 500 }
@@ -53,6 +71,7 @@ export async function POST(req: Request) {
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Bilinmeyen hata";
+    await charge.refund();
     return NextResponse.json(
       { error: `Ses üretimi sırasında hata oluştu: ${msg}` },
       { status: 500 }
