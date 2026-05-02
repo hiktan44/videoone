@@ -113,7 +113,15 @@ async function generateScene(
   aspectRatio: string,
   signal: AbortSignal
 ): Promise<SceneResult> {
-  const prompt = buildScenePrompt(scene, prevScene, storyboard.globalStyle);
+  // Karakterleri client store'dan oku (varsa)
+  let characters: Array<{ id: string; name: string; description: string }> | undefined;
+  try {
+    if (typeof window !== "undefined") {
+      const { useStore } = await import("./store");
+      characters = useStore.getState().characters;
+    }
+  } catch {}
+  const prompt = buildScenePrompt(scene, prevScene, storyboard.globalStyle, characters);
 
   // 1) Gorev olustur.
   let taskId: string;

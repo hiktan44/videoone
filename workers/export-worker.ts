@@ -20,7 +20,53 @@ type ClipSpec = {
   startTime: number;
   text?: string;
   transitionAfter?: string;
+  effects?: string[];
 };
+
+// Clip.effects[] -> ffmpeg -vf filter chain parcalari
+function effectsToFilters(effects: string[] = []): string[] {
+  const f: string[] = [];
+  for (const e of effects) {
+    switch (e) {
+      case "color-grade-warm":
+        f.push("eq=saturation=1.2:gamma=1.05,colorbalance=rs=0.15:gs=0.05:bs=-0.1");
+        break;
+      case "color-grade-cool":
+        f.push("eq=saturation=1.1,colorbalance=rs=-0.1:bs=0.15");
+        break;
+      case "vignette":
+        f.push("vignette=PI/4");
+        break;
+      case "film-grain":
+        f.push("noise=alls=12:allf=t");
+        break;
+      case "shake":
+        // hafif sarsinti — crop+random translate yerine basit zoompan
+        f.push("crop=in_w-10:in_h-10");
+        break;
+      case "zoom-in":
+        f.push("zoompan=z='min(zoom+0.0015,1.1)':d=1:s=hd1080");
+        break;
+    }
+  }
+  return f;
+}
+
+// transition adi -> xfade filter type
+function transitionToXfade(t?: string): string | null {
+  if (!t) return null;
+  const map: Record<string, string> = {
+    "fade-to-black": "fadeblack",
+    "smooth-fade": "fade",
+    "dissolve": "dissolve",
+    "zoom-blur": "zoomin",
+    "slide-left": "slideleft",
+    "slide-right": "slideright",
+  };
+  return map[t] ?? "fade";
+}
+
+const XFADE_DURATION = 0.5;
 type SubtitleSpec = { start: number; end: number; text: string };
 
 type ExportJob = {
@@ -88,9 +134,24 @@ const worker = new Worker<ExportJob>(
     if (!dbJob) throw new Error("DB job bulunamadi");
 
     const meta = (dbJob.metadata as any) || {};
-    const clips: ClipSpec[] = meta.clips || [];
+    let clips: ClipSpec[] = meta.clips || [];
     const subs: SubtitleSpec[] = meta.subtitles || [];
     const { w, h } = aspectToWH(resolution, aspectRatio);
+
+    // Brand kit (intro/outro) — kullanıcı brandKit'inden al ve clip listesine ekle.
+    let brandKit: any = meta.brandKit;
+    if (!brandKit) {
+      try {
+        const owner = await prisma.user.findUnique({ where: { id: userId }, select: { brandKit: true } });
+        brandKit = owner?.brandKit || {};
+      } catch { brandKit = {}; }
+    }
+    if (brandKit?.intro) {
+      clips = [{ id: "intro", sourceUrl: brandKit.intro, duration: 5, startTime: 0 } as ClipSpec, ...clips];
+    }
+    if (brandKit?.outro) {
+      clips = [...clips, { id: "outro", sourceUrl: brandKit.outro, duration: 5, startTime: 0 } as ClipSpec];
+    }
 
     const updateProgress = async (progress: number, status: "running" | "succeeded" | "failed" = "running") => {
       await prisma.generationJob.update({ where: { id: jobId }, data: { progress, status } });
@@ -111,15 +172,35 @@ const worker = new Worker<ExportJob>(
         const src = path.join(work, `src${i}.mp4`);
         const norm = path.join(work, `norm${i}.mp4`);
         await downloadFile(c.sourceUrl, src);
-        // Standardize: scale + pad to WxH, set codec H264, AAC audio
+        // Standardize: scale + pad to WxH, efektler, codec H264, AAC audio
+        const baseVf = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`;
+        const effectFilters = effectsToFilters(c.effects);
+        const vfChain = [baseVf, ...effectFilters].join(",");
+        const isImage = /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(c.sourceUrl);
+        // Watermark: brand kit'te logo varsa ve aktifse - ek input olarak ekle
+        const hasWatermark = brandKit?.watermark && brandKit?.logoUrl && c.id !== "intro" && c.id !== "outro";
+        let logoLocal: string | null = null;
+        if (hasWatermark) {
+          try {
+            logoLocal = path.join(work, `logo${i}.png`);
+            await downloadFile(brandKit.logoUrl, logoLocal);
+          } catch { logoLocal = null; }
+        }
+        const baseInputs = isImage
+          ? ["-loop", "1", "-i", src, "-f", "lavfi", "-t", String(c.duration), "-i", "anullsrc=cl=stereo:r=44100"]
+          : ["-i", src, "-t", String(c.duration)];
+        const inputArgs = logoLocal ? [...baseInputs, "-i", logoLocal] : baseInputs;
+        // Watermark icin filter_complex (logo overlay)
+        const wmIdx = isImage ? 2 : 1; // logo input index
+        const posMap: Record<string, string> = { tl: "10:10", tr: "W-w-10:10", bl: "10:H-h-10", br: "W-w-10:H-h-10" };
+        const wmPos = posMap[brandKit?.watermarkPosition || "br"];
+        const filterArgs = logoLocal
+          ? ["-filter_complex", `[0:v]${vfChain}[bg];[${wmIdx}:v]scale=iw*0.15:-1[wm];[bg][wm]overlay=${wmPos}[v]`, "-map", "[v]", "-map", isImage ? "1:a" : "0:a?"]
+          : ["-vf", vfChain];
         await runFfmpeg([
           "-y",
-          "-i",
-          src,
-          "-t",
-          String(c.duration),
-          "-vf",
-          `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`,
+          ...inputArgs,
+          ...filterArgs,
           "-c:v",
           "libx264",
           "-preset",
@@ -142,48 +223,97 @@ const worker = new Worker<ExportJob>(
         await updateProgress(pct);
       }
 
-      // 3. Concat list dosyası
-      const listPath = path.join(work, "list.txt");
-      const listContent = segmentPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
-      await writeFile(listPath, listContent);
-
-      // 4. SRT (varsa)
+      // 3. SRT (varsa)
       let srtPath: string | null = null;
       if (subs.length > 0) {
         srtPath = path.join(work, "subs.srt");
         await writeFile(srtPath, srtFromSubs(subs));
       }
 
-      // 5. Concat — varsa subtitle filtresi de uygula
+      // 4. Birlestirme: transitionAfter olan klipler arasinda xfade,
+      // yoksa basit concat demuxer.
       const outPath = path.join(work, "output.mp4");
-      const concatArgs = [
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        listPath,
-      ];
-      if (srtPath) {
-        // re-encode + burn subtitles
-        concatArgs.push(
-          "-vf",
-          `subtitles=${srtPath}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,BorderStyle=3,Outline=2,Shadow=0'`,
+      const hasTransitions = clips.some((c, i) => i < clips.length - 1 && transitionToXfade(c.transitionAfter));
+
+      if (hasTransitions && segmentPaths.length > 1) {
+        // filter_complex ile xfade zinciri
+        const inputArgs: string[] = [];
+        for (const p of segmentPaths) {
+          inputArgs.push("-i", p);
+        }
+        const fcParts: string[] = [];
+        let prevV = "0:v";
+        let prevA = "0:a";
+        let cumOffset = 0;
+        for (let i = 1; i < segmentPaths.length; i++) {
+          const prevClip = clips[i - 1];
+          const xf = transitionToXfade(prevClip.transitionAfter);
+          const prevDur = prevClip.duration;
+          // offset = onceki klip bitis - xfade suresi
+          cumOffset += prevDur - (xf ? XFADE_DURATION : 0);
+          const vOut = `v${i}`;
+          const aOut = `a${i}`;
+          if (xf) {
+            fcParts.push(
+              `[${prevV}][${i}:v]xfade=transition=${xf}:duration=${XFADE_DURATION}:offset=${cumOffset.toFixed(3)}[${vOut}]`
+            );
+            fcParts.push(
+              `[${prevA}][${i}:a]acrossfade=d=${XFADE_DURATION}[${aOut}]`
+            );
+          } else {
+            // gecisi yok — concat
+            fcParts.push(`[${prevV}][${prevA}][${i}:v][${i}:a]concat=n=2:v=1:a=1[${vOut}][${aOut}]`);
+          }
+          prevV = vOut;
+          prevA = aOut;
+        }
+        let finalV = prevV;
+        if (srtPath) {
+          fcParts.push(
+            `[${prevV}]subtitles=${srtPath}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,BorderStyle=3,Outline=2,Shadow=0'[vsub]`
+          );
+          finalV = "vsub";
+        }
+        await runFfmpeg([
+          "-y",
+          ...inputArgs,
+          "-filter_complex",
+          fcParts.join(";"),
+          "-map",
+          `[${finalV}]`,
+          "-map",
+          `[${prevA}]`,
           "-c:v",
           "libx264",
           "-preset",
           "fast",
           "-crf",
           "21",
+          "-pix_fmt",
+          "yuv420p",
           "-c:a",
           "aac",
-          outPath
-        );
+          outPath,
+        ]);
       } else {
-        concatArgs.push("-c", "copy", outPath);
+        // Basit concat
+        const listPath = path.join(work, "list.txt");
+        const listContent = segmentPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
+        await writeFile(listPath, listContent);
+        const concatArgs = ["-y", "-f", "concat", "-safe", "0", "-i", listPath];
+        if (srtPath) {
+          concatArgs.push(
+            "-vf",
+            `subtitles=${srtPath}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,BorderStyle=3,Outline=2,Shadow=0'`,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "21",
+            "-c:a", "aac",
+            outPath
+          );
+        } else {
+          concatArgs.push("-c", "copy", outPath);
+        }
+        await runFfmpeg(concatArgs);
       }
-      await runFfmpeg(concatArgs);
       await updateProgress(75);
 
       // 6. R2'ye yükle

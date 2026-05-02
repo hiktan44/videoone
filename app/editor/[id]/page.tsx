@@ -23,6 +23,9 @@ import { EffectsTab } from "@/components/tabs/EffectsTab";
 import { TextTab } from "@/components/tabs/TextTab";
 import { CaptionsTab } from "@/components/tabs/CaptionsTab";
 import { SettingsTab } from "@/components/tabs/SettingsTab";
+import { VersionHistory } from "@/components/VersionHistory";
+import { useUndoHistory } from "@/lib/useUndoHistory";
+import { History } from "lucide-react";
 
 export default function EditorPage() {
   const params = useParams<{ id: string }>();
@@ -31,6 +34,10 @@ export default function EditorPage() {
   const projectId = useStore((s) => s.projectId);
   const loadProject = useStore((s) => s.loadProject);
   const [loaded, setLoaded] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Undo/redo + Cmd+Z keyboard handler (loaded olmadan da hook çağrılabilir, projectId yoksa noop)
+  useUndoHistory(loaded ? params?.id : undefined);
 
   useEffect(() => {
     if (!params?.id) return;
@@ -81,6 +88,21 @@ export default function EditorPage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-zinc-950">
       <EditorTopBar />
+
+      {/* Sürüm geçmişi açma butonu - sağ üstte sabit */}
+      <button
+        type="button"
+        onClick={() => setHistoryOpen(true)}
+        className="fixed top-3 right-4 z-30 inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900/90 hover:bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-200 backdrop-blur"
+        title="Sürüm geçmişi (Cmd+Z geri al)"
+      >
+        <History className="h-3.5 w-3.5 text-purple-400" />
+        Sürümler
+      </button>
+
+      {params?.id && (
+        <VersionHistory projectId={params.id} open={historyOpen} onClose={() => setHistoryOpen(false)} />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <EditorTabStrip />

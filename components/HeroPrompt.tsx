@@ -200,46 +200,87 @@ export function HeroPrompt() {
       });
 
       try {
-        const endpoint = mode === "image" ? "/api/kie/image" : "/api/kie/video";
         const model = mode === "image" ? settings.imageModel : settings.videoModel;
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: clean,
-            model,
-            imageUrls: imageRefs.map((r) => r.url),
-            audioUrls: audioRefs.map((r) => r.url),
-            videoUrls: videoRefs.map((r) => r.url),
-            aspect_ratio: settings.aspectRatio,
-            duration: mode === "video" ? settings.videoDuration : undefined,
-            resolution: mode === "video" ? settings.videoResolution : undefined,
-          }),
-        });
-
-        const data = (await res.json().catch(() => ({}))) as {
-          taskId?: string; status?: string; resultUrl?: string; error?: string; family?: string;
+        const payload = {
+          prompt: clean,
+          model,
+          imageUrls: imageRefs.map((r) => r.url),
+          audioUrls: audioRefs.map((r) => r.url),
+          videoUrls: videoRefs.map((r) => r.url),
+          aspect_ratio: settings.aspectRatio,
+          aspectRatio: settings.aspectRatio,
+          duration: mode === "video" ? settings.videoDuration : undefined,
+          resolution: mode === "video" ? settings.videoResolution : undefined,
+          kind: mode,
         };
 
-        if (!res.ok || !data.taskId || data.taskId === "error") {
-          const msg =
-            data.error ??
-            (res.status === 401 ? "API anahtarı geçersiz"
-            : res.status === 429 ? "Çok fazla istek"
-            : res.status >= 500 ? "AI sağlayıcı sunucu hatası"
-            : "Üretim başlatılamadı.");
-          updateJob(jobId, { status: "failed", error: msg });
-          setUiError(msg);
-          return;
-        }
+        // 1) Önce /api/jobs (BullMQ kuyruk) — uzun işlerde tarayıcı kapatılsa bile çalışır.
+        let queued = false;
+        try {
+          const qRes = await fetch("/api/jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (qRes.ok) {
+            const { jobId: serverJobId } = (await qRes.json().catch(() => ({}))) as { jobId?: string };
+            if (serverJobId) {
+              queued = true;
+              updateJob(jobId, { taskId: serverJobId, status: "running", family: "queue" });
+              // SSE ile ilerlemeyi dinle
+              try {
+                const es = new EventSource(`/api/jobs/${serverJobId}/stream`);
+                es.addEventListener("progress", (ev) => {
+                  try {
+                    const d = JSON.parse((ev as MessageEvent).data) as {
+                      status?: string; progress?: number; resultUrl?: string; error?: string;
+                    };
+                    updateJob(jobId, {
+                      status: (d.status as any) || "running",
+                      resultUrl: d.resultUrl,
+                      error: d.error,
+                    });
+                  } catch {}
+                });
+                es.addEventListener("done", () => es.close());
+                es.onerror = () => es.close();
+              } catch {}
+              setPrompt("");
+            }
+          }
+          // 503 (Redis yok) veya başka hata → fallback direct API
+        } catch {}
 
-        updateJob(jobId, {
-          taskId: data.taskId,
-          status: "running",
-          resultUrl: data.resultUrl,
-          family: data.family,
-        });
-        setPrompt("");
+        if (!queued) {
+          // 2) Fallback: direkt Kie API (eski davranış)
+          const endpoint = mode === "image" ? "/api/kie/image" : "/api/kie/video";
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            taskId?: string; status?: string; resultUrl?: string; error?: string; family?: string;
+          };
+          if (!res.ok || !data.taskId || data.taskId === "error") {
+            const msg =
+              data.error ??
+              (res.status === 401 ? "API anahtarı geçersiz"
+              : res.status === 429 ? "Çok fazla istek"
+              : res.status >= 500 ? "AI sağlayıcı sunucu hatası"
+              : "Üretim başlatılamadı.");
+            updateJob(jobId, { status: "failed", error: msg });
+            setUiError(msg);
+            return;
+          }
+          updateJob(jobId, {
+            taskId: data.taskId,
+            status: "running",
+            resultUrl: data.resultUrl,
+            family: data.family,
+          });
+          setPrompt("");
+        }
         // Referanslari koru — kullanici aynilari farkli promptlarla denesin.
       } catch (err) {
         const msg = err instanceof Error ? `Ağ hatası: ${err.message}` : "Bilinmeyen ağ hatası";

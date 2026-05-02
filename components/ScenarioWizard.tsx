@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { Dropdown } from "./Dropdown";
+import { useStore } from "@/lib/store";
 import {
   CAMERA_ANGLES,
   TRANSITIONS,
@@ -774,6 +775,60 @@ function SceneCard(props: {
             />
           )}
         </div>
+      </div>
+
+      {/* Karakter atama */}
+      <CharacterAssign scene={scene} onChange={onChange} />
+    </div>
+  );
+}
+
+function CharacterAssign({
+  scene,
+  onChange,
+}: {
+  scene: Scene;
+  onChange: (patch: Partial<Scene>) => void;
+}) {
+  const characters = useStore((s) => s.characters);
+  const selected = new Set(scene.characterIds || []);
+  if (!characters || characters.length === 0) return null;
+  const toggle = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange({ characterIds: Array.from(next) });
+  };
+  return (
+    <div>
+      <label className="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+        Bu sahnedeki karakterler
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {characters.map((c) => {
+          const on = selected.has(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => toggle(c.id)}
+              className={`text-[11px] rounded-full px-2.5 py-1 border flex items-center gap-1.5 transition-colors ${
+                on
+                  ? "border-purple-500 bg-purple-500/15 text-white"
+                  : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400"
+              }`}
+              title={c.description}
+            >
+              <span
+                className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[9px] font-bold text-white"
+                style={{ background: c.color }}
+              >
+                {c.initials}
+              </span>
+              {c.name}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -25,6 +25,7 @@ model User {
   creditBalance Int      @default(100) // Yeni kullaniciya 100 kredi hosgeldin
   role          String   @default("user") // user | admin
   referralCode  String   @unique @default(cuid())
+  brandKit      Json?    // {primaryColor, accentColor, fontFamily, logoUrl, watermark, intro, outro}
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -68,9 +69,25 @@ model Project {
   chatMessages ChatMessage[]
   mediaItems   MediaAsset[]
   jobs         GenerationJob[]
+  versions     ProjectVersion[]
 
   @@index([userId])
   @@index([isPublic])
+}
+
+// Proje versiyonu — undo history persist + sürüm karşılaştırma için.
+model ProjectVersion {
+  id        String   @id @default(cuid())
+  projectId String
+  label     String?  // "Otomatik kayıt", "v1.2 — onayli", vs.
+  snapshot  Json     // tüm proje state'i (clips, characters, settings, ...)
+  createdBy String?  // userId (snapshot'i alan)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdAt])
 }
 
 // =====================================================

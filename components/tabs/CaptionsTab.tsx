@@ -61,17 +61,60 @@ export function CaptionsTab() {
     setTranscribing(true);
     setStatus(null);
     try {
-      const res = await fetch("/api/captions/transcribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audioUrl: targetClip.sourceUrl, language: "tr" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus(data.error || `Transkripsiyon hatası ${res.status}`);
-        return;
+      // 1) Once kuyruk yolu (uzun sesler icin tarayici kapansa da calisir)
+      let items: Array<{ start: number; end: number; text: string }> = [];
+      let usedQueue = false;
+      try {
+        const qRes = await fetch("/api/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "captions",
+            prompt: "transcribe",
+            audioUrl: targetClip.sourceUrl,
+          }),
+        });
+        if (qRes.ok) {
+          const { jobId } = (await qRes.json()) as { jobId: string };
+          setStatus("Kuyrukta işleniyor (tarayıcı kapatılabilir)...");
+          await new Promise<void>((resolve) => {
+            const es = new EventSource(`/api/jobs/${jobId}/stream`);
+            es.addEventListener("progress", (ev) => {
+              try {
+                const d = JSON.parse((ev as MessageEvent).data) as { status?: string; progress?: number };
+                if (d.progress) setStatus(`Kuyrukta işleniyor... %${d.progress}`);
+                if (d.status === "succeeded" || d.status === "failed") {
+                  es.close(); resolve();
+                }
+              } catch {}
+            });
+            es.addEventListener("done", () => { es.close(); resolve(); });
+            es.onerror = () => { es.close(); resolve(); };
+          });
+          // Job metadata'sindan segment'leri cek
+          const jobRes = await fetch(`/api/jobs/${jobId}`);
+          if (jobRes.ok) {
+            const jobData = await jobRes.json();
+            items = jobData?.job?.metadata?.captions || [];
+            usedQueue = items.length > 0;
+          }
+        }
+      } catch {}
+
+      // 2) Fallback: inline route
+      if (!usedQueue) {
+        const res = await fetch("/api/captions/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audioUrl: targetClip.sourceUrl, language: "tr" }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(data.error || `Transkripsiyon hatası ${res.status}`);
+          return;
+        }
+        items = data.items || [];
       }
-      const items: Array<{ start: number; end: number; text: string }> = data.items || [];
       if (items.length === 0) {
         setStatus("Transkript boş döndü.");
         return;

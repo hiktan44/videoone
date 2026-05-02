@@ -10,6 +10,38 @@ import { prisma } from "../lib/db";
 import { publishProgress, QUEUE_NAME, type GenerationJobPayload } from "../lib/queue";
 
 const KIE_BASE = "https://api.kie.ai";
+
+function parseSttSegments(result: unknown): Array<{ start: number; end: number; text: string }> {
+  if (!result) return [];
+  let parsed: any = result;
+  if (typeof result === "string") {
+    try { parsed = JSON.parse(result); } catch { return [{ start: 0, end: 0, text: result }]; }
+  }
+  if (Array.isArray(parsed?.segments)) {
+    return parsed.segments.map((s: any) => ({
+      start: Number(s.start || 0),
+      end: Number(s.end || 0),
+      text: String(s.text || "").trim(),
+    }));
+  }
+  if (Array.isArray(parsed?.words)) {
+    const groups: Array<{ start: number; end: number; text: string }> = [];
+    let cur = { start: 0, end: 0, text: "" };
+    for (const w of parsed.words) {
+      const wStart = Number(w.start || 0);
+      const wEnd = Number(w.end || 0);
+      const wText = String(w.text || w.word || "");
+      if (cur.text === "") cur.start = wStart;
+      cur.text += (cur.text ? " " : "") + wText;
+      cur.end = wEnd;
+      if (cur.end - cur.start > 5) { groups.push(cur); cur = { start: 0, end: 0, text: "" }; }
+    }
+    if (cur.text) groups.push(cur);
+    return groups;
+  }
+  if (typeof parsed?.text === "string") return [{ start: 0, end: 0, text: parsed.text }];
+  return [];
+}
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLL_ATTEMPTS = 240; // 20 dk
 
@@ -208,9 +240,32 @@ const worker = new Worker<GenerationJobPayload>(
         continue;
       }
       if (status.state === "succeeded") {
+        // Captions ise sonucu segmentlere parse edip metadata'ya yaz.
+        let extraMeta: any = undefined;
+        if (p.kind === "captions") {
+          try {
+            const cleanRes = await pollKieTask(task.taskId, task.family);
+            // resultUrl asagida zaten ayristirildi; ham veriyi tekrar al:
+            const headers = { Authorization: `Bearer ${process.env.KIE_API_KEY}` };
+            const r = await fetch(
+              `${KIE_BASE}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(task.taskId)}`,
+              { headers, cache: "no-store" }
+            );
+            const d = await r.json().catch(() => ({}));
+            const raw = d?.data?.resultJson || d?.data?.result;
+            const segments = parseSttSegments(raw);
+            extraMeta = { captions: segments };
+            void cleanRes;
+          } catch {}
+        }
         await prisma.generationJob.update({
           where: { id: p.jobId },
-          data: { status: "succeeded", progress: 100, resultUrl: status.resultUrl },
+          data: {
+            status: "succeeded",
+            progress: 100,
+            resultUrl: status.resultUrl,
+            ...(extraMeta ? { metadata: { ...(p as any).metadata, ...extraMeta } } : {}),
+          },
         });
         await publishProgress(p.jobId, {
           status: "succeeded",

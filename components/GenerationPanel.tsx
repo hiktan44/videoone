@@ -39,6 +39,7 @@ function shortenPrompt(p: string, max = 56): string {
 
 export function GenerationPanel() {
   const jobs = useStore((s) => s.jobs);
+  const updateJob = useStore((s) => s.updateJob);
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -137,6 +138,25 @@ export function GenerationPanel() {
                       {job.error}
                     </div>
                   )}
+                  {job.status === "failed" && job.taskId && job.family === "queue" ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const r = await fetch(`/api/jobs/${job.taskId}`, { method: "POST" });
+                          if (r.ok) {
+                            const { jobId: newId } = await r.json();
+                            // local job'i guncelle: yeni queue id ile yeniden running
+                            updateJob(job.id, { taskId: newId, status: "running", error: undefined, family: "queue" });
+                          }
+                        } catch {}
+                      }}
+                      className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold rounded border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 px-2 py-1"
+                      title="Tekrar dene"
+                    >
+                      ↻ Tekrar dene
+                    </button>
+                  ) : null}
                   {job.status === "succeeded" && job.resultUrl && (
                     <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                       <button

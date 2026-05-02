@@ -580,26 +580,52 @@ export function Landing() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-ink-800 py-10 mt-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-ink-400">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded-md bg-gradient-vibe flex items-center justify-center">
-              <Sparkles className="h-2.5 w-2.5 text-ink-950" strokeWidth={2.5} />
+      <footer className="border-t border-ink-800 mt-12">
+        <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-5 gap-8 text-sm">
+          <div className="col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-7 w-7 rounded-md bg-gradient-vibe flex items-center justify-center">
+                <Sparkles className="h-3.5 w-3.5 text-ink-950" strokeWidth={2.5} />
+              </div>
+              <span className="text-ink-100 font-semibold">Vibe Studio</span>
             </div>
-            <span>Vibe Studio · {tr.footer.tagline}</span>
-            <span className="text-ink-600">·</span>
-            <span>© 2026 {tr.footer.copyright}</span>
+            <p className="text-ink-400 text-xs leading-relaxed max-w-sm">
+              {tr.footer.tagline}. Türkiye'de geliştirildi · KVKK & GDPR uyumlu.
+            </p>
+            <p className="text-ink-500 text-xs mt-3">© 2026 Vibe Studio</p>
           </div>
-          <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-ink-100 transition-colors">
-              {tr.footer.privacy}
-            </a>
-            <a href="#" className="hover:text-ink-100 transition-colors">
-              {tr.footer.terms}
-            </a>
-            <a href="mailto:hello@videoone.com.tr" className="hover:text-ink-100 transition-colors">
-              {tr.footer.contact}
-            </a>
+          <div>
+            <div className="text-ink-100 font-semibold text-xs uppercase tracking-wider mb-3">Hukuki</div>
+            <ul className="space-y-2 text-xs text-ink-400">
+              <li><a href="/legal/privacy" className="hover:text-ink-100">Gizlilik Politikası</a></li>
+              <li><a href="/legal/kvkk" className="hover:text-ink-100">KVKK Aydınlatma</a></li>
+              <li><a href="/legal/gdpr" className="hover:text-ink-100">GDPR Notice</a></li>
+              <li><a href="/legal/cookies" className="hover:text-ink-100">Çerez Politikası</a></li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-ink-100 font-semibold text-xs uppercase tracking-wider mb-3">Şartlar</div>
+            <ul className="space-y-2 text-xs text-ink-400">
+              <li><a href="/legal/terms" className="hover:text-ink-100">Kullanım Şartları</a></li>
+              <li><a href="/legal/refund" className="hover:text-ink-100">İade & Cayma</a></li>
+              <li><a href="/legal/dpa" className="hover:text-ink-100">Veri İşleme (DPA)</a></li>
+              <li><a href="/legal/imprint" className="hover:text-ink-100">Künye / Impressum</a></li>
+            </ul>
+          </div>
+          <div>
+            <div className="text-ink-100 font-semibold text-xs uppercase tracking-wider mb-3">Hesabım</div>
+            <ul className="space-y-2 text-xs text-ink-400">
+              <li><a href="/settings/brand-kit" className="hover:text-ink-100">Marka Kiti</a></li>
+              <li><a href="/settings/privacy" className="hover:text-ink-100">Verilerim & Silme</a></li>
+              <li><a href="mailto:destek@videoone.com.tr" className="hover:text-ink-100">Destek</a></li>
+              <li><a href="mailto:kvkk@videoone.com.tr" className="hover:text-ink-100">KVKK Talep</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-ink-800 py-4">
+          <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-2 text-[11px] text-ink-500">
+            <span>Made with ❤️ in 🇹🇷 · {tr.footer.copyright}</span>
+            <span>Bu site Cloudflare R2 (EU) + Stripe (EU) + Coolify (TR) altyapısı kullanır.</span>
           </div>
         </div>
       </footer>

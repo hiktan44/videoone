@@ -34,8 +34,62 @@ export function StockTab() {
     async (overrideTab?: TabKey) => {
       const tab = overrideTab ?? active;
       if (tab === "Müzik") {
-        setItems([]);
-        setError("Müzik araması yakında — Suno entegrasyonu Faz 5 ile geliyor.");
+        // Müzik için Suno üretimi (kuyruk yolu)
+        const q = query.trim();
+        if (!q) { setError("Müzik için bir prompt yazın (örn. epik sinematik orkestra)."); return; }
+        setLoading(true);
+        setError(null);
+        setHasSearched(true);
+        try {
+          const res = await fetch("/api/jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kind: "music", prompt: q, model: "Suno V4.5" }),
+          });
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            // Fallback: direct kie/music
+            const r2 = await fetch("/api/kie/music", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: q }),
+            }).catch(() => null);
+            if (!r2 || !r2.ok) {
+              setError(d.error || "Müzik üretimi başlatılamadı");
+              setItems([]);
+              return;
+            }
+          }
+          const { jobId } = await res.json();
+          setError("Üretim başladı — sonuç hazır olduğunda Medya kütüphanesinde görünecek.");
+          // SSE ile dinle, hazır olunca timeline'a otomatik ekle
+          try {
+            const es = new EventSource(`/api/jobs/${jobId}/stream`);
+            es.addEventListener("progress", (ev) => {
+              try {
+                const d = JSON.parse((ev as MessageEvent).data);
+                if (d.status === "succeeded" && d.resultUrl) {
+                  addClip({
+                    trackId: "audio",
+                    label: q.slice(0, 24),
+                    duration: 30,
+                    sourceUrl: d.resultUrl,
+                    gradient: "from-fuchsia-500 to-purple-500",
+                  });
+                  setError("✓ Müzik timeline'a eklendi.");
+                  es.close();
+                } else if (d.status === "failed") {
+                  setError(d.error || "Müzik üretimi başarısız.");
+                  es.close();
+                }
+              } catch {}
+            });
+            es.onerror = () => es.close();
+          } catch {}
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Müzik hatası");
+        } finally {
+          setLoading(false);
+        }
         return;
       }
       const q = query.trim();
@@ -113,17 +167,16 @@ export function StockTab() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") search();
               }}
-              placeholder={active === "Müzik" ? "Yakında..." : "Aramak için yazın..."}
-              disabled={active === "Müzik"}
+              placeholder={active === "Müzik" ? "Müzik tarif edin (epik, lo-fi, jazz...)" : "Aramak için yazın..."}
               className="flex-1 bg-transparent text-xs text-ink-100 placeholder:text-ink-500 focus:outline-none disabled:opacity-50"
             />
           </div>
           <button
             onClick={() => search()}
-            disabled={loading || !query.trim() || active === "Müzik"}
+            disabled={loading || !query.trim()}
             className="rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-ink-950 text-xs px-3 py-1.5 font-semibold transition-colors"
           >
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ara"}
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (active === "Müzik" ? "Üret" : "Ara")}
           </button>
         </div>
       </div>
@@ -143,11 +196,14 @@ export function StockTab() {
           </div>
         )}
 
-        {active === "Müzik" && (
+        {active === "Müzik" && !loading && !error && (
           <div className="text-center py-12 space-y-3">
             <Music className="h-10 w-10 text-ink-600 mx-auto" />
             <div className="text-sm text-ink-400">
-              Müzik araması yakında — Suno V5 ile AI müzik üretimi gelecek.
+              Suno ile AI müzik üretimi: prompt yazıp <strong>Üret</strong>'e basın.
+            </div>
+            <div className="text-[11px] text-ink-500">
+              Örn: "epik sinematik orkestra", "lo-fi chill beat", "enerjik elektro"
             </div>
           </div>
         )}

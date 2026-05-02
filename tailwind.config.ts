@@ -80,6 +80,37 @@ const config: Config = {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        "fadeIn": { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+        "fadeOut": { "0%": { opacity: "1" }, "100%": { opacity: "0" } },
+        "zoomIn": {
+          "0%": { transform: "scale(1.2)", opacity: "0" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "zoomOut": {
+          "0%": { transform: "scale(1)", opacity: "1" },
+          "100%": { transform: "scale(1.2)", opacity: "0" },
+        },
+        "slideInLeft": {
+          "0%": { transform: "translateX(-30%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
+        "slideOutLeft": {
+          "0%": { transform: "translateX(0)", opacity: "1" },
+          "100%": { transform: "translateX(-30%)", opacity: "0" },
+        },
+        "slideInRight": {
+          "0%": { transform: "translateX(30%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
+        "slideOutRight": {
+          "0%": { transform: "translateX(0)", opacity: "1" },
+          "100%": { transform: "translateX(30%)", opacity: "0" },
+        },
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "25%": { transform: "translateX(-2px)" },
+          "75%": { transform: "translateX(2px)" },
+        },
       },
       boxShadow: {
         "glow-amber": "0 0 40px -8px rgba(245, 158, 11, 0.4)",

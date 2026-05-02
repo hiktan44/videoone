@@ -35,7 +35,23 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const name = String(body.name || "İsimsiz Vibe").slice(0, 120);
     const gradient = String(body.gradient || "from-purple-500 via-pink-500 to-orange-400");
-    const settings = body.settings || {};
+    const incomingSettings = body.settings || {};
+
+    // Brand kit defaultlarini settings'e uygula (kullanici override etmediyse).
+    const u = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { brandKit: true },
+    });
+    const kit = (u?.brandKit as Record<string, unknown>) || {};
+    const settings = {
+      aspectRatio: kit.defaultAspect ?? "16:9",
+      videoResolution: kit.defaultResolution ?? "720p",
+      globalStyle: kit.globalStyle ?? "",
+      globalStyleEnabled: !!kit.globalStyle,
+      ...(kit.voicePreference ? { voiceModel: kit.voicePreference } : {}),
+      brandKit: kit,
+      ...incomingSettings, // kullanicinin verdikleri en son uygulanir
+    };
 
     const project = await prisma.project.create({
       data: {

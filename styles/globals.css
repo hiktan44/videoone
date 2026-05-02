@@ -254,3 +254,26 @@ textarea {
   outline: 2px solid #f59e0b;
   outline-offset: 2px;
 }
+
+/* Legal pages typography */
+.legal-prose {
+  color: #d4d4d8;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  max-width: 100%;
+}
+.legal-prose h1 { font-size: 1.875rem; font-weight: 700; color: #fafafa; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.legal-prose h2 { font-size: 1.25rem; font-weight: 600; color: #fafafa; margin-top: 2rem; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
+.legal-prose h3 { font-size: 1.05rem; font-weight: 600; color: #fafafa; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.legal-prose p { margin: 0.75rem 0; color: #d4d4d8; }
+.legal-prose ul { list-style: disc; margin: 0.75rem 0 0.75rem 1.5rem; }
+.legal-prose ol { list-style: decimal; margin: 0.75rem 0 0.75rem 1.5rem; }
+.legal-prose li { margin: 0.25rem 0; color: #d4d4d8; }
+.legal-prose a { color: #fbbf24; text-decoration: underline; }
+.legal-prose a:hover { color: #fde68a; }
+.legal-prose strong { color: #fafafa; font-weight: 600; }
+.legal-prose code { background: #18181b; padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.875em; color: #fde68a; }
+.legal-prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+.legal-prose th, .legal-prose td { border: 1px solid #27272a; padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+.legal-prose th { background: #18181b; color: #fafafa; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.legal-prose td ul { margin: 0.25rem 0 0.25rem 1rem; }

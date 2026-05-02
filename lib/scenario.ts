@@ -60,6 +60,7 @@ export type Scene = {
   cameraAngle: CameraAngle;
   transitionAfter?: Transition; // sonraki sahneye gecis
   aspectRatio?: string; // proje genelinden override
+  characterIds?: string[]; // bu sahnede yer alan karakterler (CharactersTab'tan)
 };
 
 export type Storyboard = {
@@ -84,7 +85,8 @@ export function actualTotalDuration(s: Storyboard): number {
 export function buildScenePrompt(
   scene: Scene,
   prevScene: Scene | undefined,
-  globalStyle?: string
+  globalStyle?: string,
+  characters?: Array<{ id: string; name: string; description: string }>
 ): string {
   const parts: string[] = [];
 
@@ -96,6 +98,18 @@ export function buildScenePrompt(
   if (prevScene?.transitionAfter) {
     const t = TRANSITIONS.find((t) => t.id === prevScene.transitionAfter);
     if (t) parts.push(`continuing ${t.en} from previous scene`);
+  }
+
+  // Sahnedeki karakterler
+  if (scene.characterIds && scene.characterIds.length > 0 && characters) {
+    const chars = scene.characterIds
+      .map((id) => characters.find((c) => c.id === id))
+      .filter(Boolean) as Array<{ name: string; description: string }>;
+    if (chars.length > 0) {
+      parts.push(
+        `Featuring: ${chars.map((c) => `${c.name} (${c.description})`).join(", ")}`
+      );
+    }
   }
 
   // Asil sahne anlatimi
