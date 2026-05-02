@@ -1,12 +1,26 @@
+// Kie.ai üzerinden ElevenLabs / InWorld TTS — gerçek createTask + polling.
+// Body: { text, voiceModel?, language? }
+// Doner: { taskId, status, family, audioUrl? }
+// Frontend polling /api/kie/poll ile sonucu bekler.
+
 import { NextResponse } from "next/server";
 import { chargeForGeneration } from "@/lib/charge-helper";
+import { createTask } from "@/lib/kie";
 
-// Kie.ai ses üretimi uç noktası.
-// KIE_API_KEY yoksa mock yanıt döner (geliştirme için).
+const VOICE_MODEL_MAP: Record<string, string> = {
+  // Display name → Kie modelDisplayName (catalog'da var)
+  "Eleven Labs V3": "ElevenLabs Text-to-Dialogue V3",
+  "Eleven Labs Turbo": "ElevenLabs TTS Turbo 2.5",
+  "ElevenLabs TTS Multilingual V2": "ElevenLabs TTS Multilingual V2",
+  "ElevenLabs TTS Turbo 2.5": "ElevenLabs TTS Turbo 2.5",
+  "ElevenLabs Text-to-Dialogue V3": "ElevenLabs Text-to-Dialogue V3",
+  "InWorld 1.5 Max": "ElevenLabs TTS Multilingual V2", // fallback (InWorld Kie'de yok)
+};
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const text = String(body?.text ?? "").trim();
-  const voiceModel = String(body?.voiceModel ?? "InWorld 1.5 Max");
+  const requestedVoice = String(body?.voiceModel ?? "ElevenLabs TTS Multilingual V2");
   const language = String(body?.language ?? "Türkçe");
 
   if (!text) {
@@ -16,14 +30,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // Kredi düşürme — text uzunluğuna göre tahmini süre (~150 wpm)
+  // Kullanıcının seçtiği voice'u catalog modeline çevir
+  const modelDisplayName = VOICE_MODEL_MAP[requestedVoice] || "ElevenLabs TTS Multilingual V2";
+
+  // Kredi düşürme
   const estimatedDur = Math.max(3, text.split(/\s+/).length / 2.5);
   let charge;
   try {
     charge = await chargeForGeneration({
       kind: "voice",
       durationSec: estimatedDur,
-      modelDisplayName: voiceModel,
+      modelDisplayName,
     });
   } catch {
     return NextResponse.json(
@@ -32,13 +49,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const hasKey = Boolean(process.env.KIE_API_KEY);
-
-  if (!hasKey) {
-    // Mock yanıt — taskId ve placeholder audioUrl.
-    const taskId = `mock-voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  if (!process.env.KIE_API_KEY) {
+    // Mock — sadece dev
     return NextResponse.json({
-      taskId,
+      taskId: `mock-voice-${Date.now()}`,
       status: "succeeded",
       audioUrl:
         "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=",
@@ -46,28 +60,109 @@ export async function POST(req: Request) {
     });
   }
 
+  // Gerçek Kie createTask çağrısı (lib/kie.ts üzerinden — text input olarak prompt'a yerleştirir)
+  // Not: ElevenLabs TTS modelleri input.text bekler; lib/kie.ts default jobs body 'prompt' alanı
+  // kullandığı için biz burada özel POST yapıyoruz.
   try {
-    const res = await fetch("https://api.kie.ai/v1/voice/generate", {
+    const modelMap: Record<string, string> = {
+      "ElevenLabs TTS Multilingual V2": "elevenlabs/text-to-speech-multilingual-v2",
+      "ElevenLabs TTS Turbo 2.5": "elevenlabs/text-to-speech-turbo-2-5",
+      "ElevenLabs Text-to-Dialogue V3": "elevenlabs/text-to-dialogue-v3",
+    };
+    const modelId = modelMap[modelDisplayName] || "elevenlabs/text-to-speech-multilingual-v2";
+
+    const res = await fetch("https://api.kie.ai/api/v1/jobs/createTask", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.KIE_API_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ text, voiceModel, language }),
+      body: JSON.stringify({
+        model: modelId,
+        input: {
+          text,
+          // Türkçe için multilingual gerekli; turbo İngilizce ağırlıklı ama Türkçe kabul eder
+          language_code: language === "Türkçe" ? "tr" : language === "English" ? "en" : "tr",
+        },
+      }),
     });
+
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       await charge.refund();
       return NextResponse.json(
-        { error: `Ses üretimi başarısız: ${res.status} ${errText}` },
-        { status: 500 }
+        { error: `Ses üretimi başarısız: ${res.status} ${errText.slice(0, 200)}` },
+        { status: 502 }
       );
     }
+
     const data = await res.json();
+    const code = data?.code;
+    if (code !== undefined && code !== 200 && code !== 0) {
+      await charge.refund();
+      return NextResponse.json(
+        { error: `Ses üretimi reddedildi: ${data?.msg || data?.message || code}` },
+        { status: 502 }
+      );
+    }
+    const taskId = data?.data?.taskId || data?.taskId;
+    if (!taskId) {
+      await charge.refund();
+      return NextResponse.json(
+        { error: "Ses üretimi taskId alınamadı" },
+        { status: 502 }
+      );
+    }
+
+    // TTS hızlı — internal polling ile audioUrl bekle (max ~60sn)
+    const POLL_MS = 2000;
+    const MAX = 30;
+    for (let i = 0; i < MAX; i++) {
+      await new Promise((r) => setTimeout(r, POLL_MS));
+      const pollRes = await fetch(
+        `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+        { headers: { Authorization: `Bearer ${process.env.KIE_API_KEY}` }, cache: "no-store" }
+      );
+      if (!pollRes.ok) continue;
+      const pdata = await pollRes.json();
+      const state = pdata?.data?.state;
+      if (state === "success") {
+        const result = pdata?.data?.resultJson || pdata?.data?.result;
+        let audioUrl: string | undefined;
+        if (typeof result === "string") {
+          try {
+            const parsed = JSON.parse(result);
+            audioUrl =
+              parsed?.audio_url ||
+              parsed?.audioUrl ||
+              parsed?.url ||
+              (Array.isArray(parsed?.resultUrls) ? parsed.resultUrls[0] : undefined);
+          } catch {
+            audioUrl = result;
+          }
+        } else if (result && typeof result === "object") {
+          audioUrl = (result as any).audio_url || (result as any).audioUrl || (result as any).url;
+        }
+        return NextResponse.json({
+          taskId,
+          status: "succeeded",
+          audioUrl,
+          family: "jobs",
+        });
+      }
+      if (state === "fail" || state === "failed") {
+        await charge.refund();
+        return NextResponse.json(
+          { error: pdata?.data?.failMsg || "TTS failed" },
+          { status: 502 }
+        );
+      }
+    }
+    // Timeout — yine de taskId dön, frontend pollNG ile devam edebilir
     return NextResponse.json({
-      taskId: data.taskId || data.id || "unknown",
-      status: data.status || "succeeded",
-      audioUrl: data.audioUrl || data.resultUrl,
+      taskId,
+      status: "running",
+      family: "jobs",
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Bilinmeyen hata";
