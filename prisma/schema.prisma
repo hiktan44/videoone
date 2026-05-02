@@ -55,6 +55,9 @@ model Project {
   gradient  String   @default("from-purple-500 via-pink-500 to-orange-400")
   settings  Json     @default("{}")
   isPublic  Boolean  @default(false)
+  starred   Boolean  @default(false)
+  isTemplate Boolean @default(false)
+  templateCategory String?
   thumbnailUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

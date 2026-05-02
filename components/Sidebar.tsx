@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Home,
@@ -29,16 +30,16 @@ type NavItem = {
 
 const mainItems: NavItem[] = [
   { icon: Home, label: "Ana Sayfa", href: "/" },
-  { icon: Folder, label: "Projeler", disabled: true },
-  { icon: Star, label: "Yıldızlananlar", disabled: true },
-  { icon: Share2, label: "Paylaşılanlar", disabled: true },
+  { icon: Folder, label: "Projeler", href: "/projects" },
+  { icon: Star, label: "Yıldızlananlar", href: "/starred" },
+  { icon: Share2, label: "Paylaşılanlar", href: "/shared" },
 ];
 
 const resourceItems: NavItem[] = [
-  { icon: Layout, label: "Şablonlar", disabled: true },
-  { icon: Tv, label: "Kanal", disabled: true },
-  { icon: Globe, label: "Yayınlanan Şablonlar", disabled: true },
-  { icon: HelpCircle, label: "Destek", disabled: true },
+  { icon: Layout, label: "Şablonlar", href: "/templates" },
+  { icon: Tv, label: "Kanal", href: "/channel" },
+  { icon: Globe, label: "Yayınlanan Şablonlar", href: "/explore" },
+  { icon: HelpCircle, label: "Destek", href: "/support" },
 ];
 
 function NavRow({ item, active }: { item: NavItem; active?: boolean }) {
@@ -80,6 +81,12 @@ function NavRow({ item, active }: { item: NavItem; active?: boolean }) {
 
 export function Sidebar() {
   const [referralOpen, setReferralOpen] = useState(false);
+  const pathname = usePathname() || "/";
+  const isActive = (href?: string) => {
+    if (!href) return false;
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
+  };
   return (
     <>
     <ReferralModal open={referralOpen} onClose={() => setReferralOpen(false)} />
@@ -97,7 +104,7 @@ export function Sidebar() {
         <ul className="space-y-1">
           {mainItems.map((it, i) => (
             <li key={it.label + i}>
-              <NavRow item={it} active={i === 0} />
+              <NavRow item={it} active={isActive(it.href)} />
             </li>
           ))}
         </ul>
@@ -108,7 +115,7 @@ export function Sidebar() {
         <ul className="mt-2 space-y-1">
           {resourceItems.map((it) => (
             <li key={it.label}>
-              <NavRow item={it} />
+              <NavRow item={it} active={isActive(it.href)} />
             </li>
           ))}
         </ul>
