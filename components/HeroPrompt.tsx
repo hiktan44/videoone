@@ -261,7 +261,7 @@ export function HeroPrompt() {
   return (
     <form
       onSubmit={submit}
-      className="mt-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md p-4 shadow-2xl shadow-black/30"
+      className="mt-8 relative z-30 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-md p-4 shadow-2xl shadow-black/30"
     >
       <textarea
         value={prompt}
