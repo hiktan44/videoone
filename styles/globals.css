@@ -60,6 +60,52 @@ html.light .hover\:bg-ink-900:hover { background-color: var(--surface-2) !import
 html.light .hover\:text-ink-50:hover,
 html.light .hover\:text-ink-100:hover { color: var(--text) !important; }
 
+/* Eski zinc-* class'lari icin light override (geriye uyum: dashboard, HeroPrompt vb.) */
+html.light .bg-zinc-950 { background-color: var(--bg) !important; }
+html.light .bg-zinc-900,
+html.light .bg-zinc-900\/40,
+html.light .bg-zinc-900\/50,
+html.light .bg-zinc-900\/60,
+html.light .bg-zinc-900\/80,
+html.light .bg-zinc-900\/95 { background-color: var(--surface) !important; }
+html.light .bg-zinc-800,
+html.light .bg-zinc-800\/40,
+html.light .bg-zinc-800\/60,
+html.light .bg-zinc-800\/80 { background-color: var(--surface-2) !important; }
+html.light .bg-zinc-700,
+html.light .bg-zinc-700\/60 { background-color: #e4e4e7 !important; }
+
+html.light .text-white,
+html.light .text-zinc-50,
+html.light .text-zinc-100 { color: var(--text) !important; }
+html.light .text-zinc-200,
+html.light .text-zinc-300 { color: var(--text-muted) !important; }
+html.light .text-zinc-400,
+html.light .text-zinc-500,
+html.light .text-zinc-600 { color: var(--text-faint) !important; }
+
+html.light .border-zinc-700,
+html.light .border-zinc-700\/40,
+html.light .border-zinc-800,
+html.light .border-zinc-800\/40,
+html.light .border-zinc-800\/60,
+html.light .border-zinc-800\/80,
+html.light .border-zinc-900,
+html.light .border-zinc-900\/80 { border-color: var(--border) !important; }
+
+html.light .hover\:bg-zinc-800:hover,
+html.light .hover\:bg-zinc-800\/60:hover,
+html.light .hover\:bg-zinc-900:hover,
+html.light .hover\:bg-zinc-900\/60:hover { background-color: var(--surface-2) !important; }
+
+html.light .hover\:text-white:hover,
+html.light .hover\:text-zinc-100:hover,
+html.light .hover\:text-zinc-300:hover { color: var(--text) !important; }
+
+/* Placeholder rengi light tema icin biraz daha koyu */
+html.light input::placeholder,
+html.light textarea::placeholder { color: var(--text-faint) !important; }
+
 html,
 body {
   background-color: var(--bg);

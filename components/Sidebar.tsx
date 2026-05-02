@@ -29,7 +29,7 @@ type NavItem = {
 };
 
 const mainItems: NavItem[] = [
-  { icon: Home, label: "Ana Sayfa", href: "/" },
+  { icon: Home, label: "Ana Sayfa", href: "/app" },
   { icon: Folder, label: "Projeler", href: "/projects" },
   { icon: Star, label: "Yıldızlananlar", href: "/starred" },
   { icon: Share2, label: "Paylaşılanlar", href: "/shared" },

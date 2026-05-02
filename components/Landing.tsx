@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import {
   Sparkles,
   ArrowRight,
@@ -175,16 +175,28 @@ export function Landing() {
           <div className="flex items-center gap-2">
             <LanguageToggle />
             <ThemeToggle />
-            <SignInButton mode="modal">
-              <button className="text-xs text-ink-200 hover:text-ink-50 px-3 py-1.5 transition-colors">
-                {tr.nav.signin}
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-ink-950 px-3 py-1.5 transition-colors shadow-glow-amber">
-                {tr.nav.start}
-              </button>
-            </SignUpButton>
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button className="text-xs text-ink-200 hover:text-ink-50 px-3 py-1.5 transition-colors">
+                  {tr.nav.signin}
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-ink-950 px-3 py-1.5 transition-colors shadow-glow-amber">
+                  {tr.nav.start}
+                </button>
+              </SignUpButton>
+            </Show>
+            <Show when="signed-in">
+              <Link
+                href="/app"
+                className="text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-ink-950 px-3 py-1.5 transition-colors shadow-glow-amber inline-flex items-center gap-1"
+              >
+                Dashboard
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+              <UserButton />
+            </Show>
           </div>
         </div>
       </header>
