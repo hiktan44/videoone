@@ -76,6 +76,17 @@ const FALLBACKS: Record<Provider, string[]> = {
   openai: ["gpt-4o", "gpt-4o-mini"],
 };
 
+/** Hangi providerlari deneyebileceğimizi sirayla doner. Birinci tukenmis ise sonrakilere geç. */
+function getProviderChain(): Provider[] {
+  const primary = getProvider();
+  const chain: Provider[] = [primary];
+  // Diger provider'lara fallback (key varsa)
+  if (primary !== "kie" && process.env.KIE_API_KEY) chain.push("kie");
+  if (primary !== "zai" && process.env.ZAI_API_KEY) chain.push("zai");
+  if (primary !== "openai" && process.env.OPENAI_API_KEY) chain.push("openai");
+  return chain;
+}
+
 function getModel(): string {
   if (process.env.LLM_MODEL) return process.env.LLM_MODEL;
   const provider = getProvider();
@@ -141,32 +152,30 @@ async function callOnce(
 }
 
 export async function chatCompletion(req: ChatRequest): Promise<ChatResponse> {
-  const provider = getProvider();
-  const apiKey = getApiKey(provider);
-  if (!apiKey) {
-    throw new Error(`${provider.toUpperCase()}_API_KEY tanımlı değil`);
-  }
-
-  const chain = getModelChain();
+  const providerChain = getProviderChain();
   const errors: string[] = [];
   let data: any = null;
 
-  for (const model of chain) {
-    const result = await callOnce(provider, model, apiKey, req);
-    if (result.ok) {
-      data = result.data;
-      break;
-    }
-    errors.push(result.error || "?");
-    // Sadece 5xx, 429 veya Kie maintenance gibi hatalarda fallback dene
-    // 4xx (bad request) için fallback anlamsız
-    if (result.status && result.status >= 400 && result.status < 500 && result.status !== 429) {
-      break;
+  outer: for (const provider of providerChain) {
+    const apiKey = getApiKey(provider);
+    if (!apiKey) continue;
+    const modelChain = FALLBACKS[provider];
+    for (const model of modelChain) {
+      const result = await callOnce(provider, model, apiKey, req);
+      if (result.ok) {
+        data = result.data;
+        break outer;
+      }
+      errors.push(result.error || "?");
+      if (result.status && result.status >= 400 && result.status < 500 && result.status !== 429) {
+        // Bad request — bu modelden vazgeç ama fallback dene
+        continue;
+      }
     }
   }
 
   if (!data) {
-    throw new Error(`Tüm LLM modelleri başarısız: ${errors.slice(0, 3).join(" | ")}`);
+    throw new Error(`Tüm LLM sağlayıcılar başarısız: ${errors.slice(0, 5).join(" | ")}`);
   }
   // Kie bazen data.choices, bazen data.data.choices doner — defensif
   const choice = data?.choices?.[0]?.message || data?.data?.choices?.[0]?.message;
@@ -191,47 +200,46 @@ export async function chatCompletionStream(
   req: ChatRequest,
   onChunk: (event: "token" | "tool" | "done", data: any) => void
 ): Promise<void> {
-  const provider = getProvider();
-  const apiKey = getApiKey(provider);
-  if (!apiKey) {
-    throw new Error(`${provider.toUpperCase()}_API_KEY tanımlı değil`);
-  }
-
-  const chain = getModelChain();
+  const providerChain = getProviderChain();
   const errors: string[] = [];
   let res: Response | null = null;
 
-  for (const model of chain) {
-    const url = getEndpoint(provider, model);
-    const body: any = {
-      model,
-      messages: req.messages,
-      temperature: req.temperature ?? 0.7,
-      stream: true,
-    };
-    if (req.tools && req.tools.length > 0) body.tools = req.tools;
+  outer: for (const provider of providerChain) {
+    const apiKey = getApiKey(provider);
+    if (!apiKey) continue;
+    const modelChain = FALLBACKS[provider];
 
-    try {
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const txt = await r.text().catch(() => "");
-        errors.push(`${model} ${r.status}: ${txt.slice(0, 100)}`);
-        if (r.status >= 400 && r.status < 500 && r.status !== 429) break;
-        continue;
+    for (const model of modelChain) {
+      const url = getEndpoint(provider, model);
+      const body: any = {
+        model,
+        messages: req.messages,
+        temperature: req.temperature ?? 0.7,
+        stream: true,
+      };
+      if (req.tools && req.tools.length > 0) body.tools = req.tools;
+
+      try {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const txt = await r.text().catch(() => "");
+          errors.push(`${provider}/${model} ${r.status}: ${txt.slice(0, 100)}`);
+          continue;
+        }
+        res = r;
+        break outer;
+      } catch (e) {
+        errors.push(`${provider}/${model} network: ${e instanceof Error ? e.message : "?"}`);
       }
-      res = r;
-      break;
-    } catch (e) {
-      errors.push(`${model} network: ${e instanceof Error ? e.message : "?"}`);
     }
   }
 
   if (!res || !res.body) {
-    throw new Error(`Stream başarısız: ${errors.slice(0, 3).join(" | ")}`);
+    throw new Error(`Stream başarısız: ${errors.slice(0, 5).join(" | ")}`);
   }
 
   const reader = res.body.getReader();
