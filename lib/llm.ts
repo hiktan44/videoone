@@ -72,7 +72,7 @@ function getEndpoint(provider: Provider, model: string): string {
 // Provider bazli fallback chain
 const FALLBACKS: Record<Provider, string[]> = {
   kie: ["gemini-3-pro", "gemini-2.5-pro", "gpt-5-2", "claude-sonnet-4-6"],
-  zai: ["glm-4.6", "glm-4.5-air", "glm-4.5"], // z.ai GLM modelleri
+  zai: ["glm-5.1", "glm-5-turbo", "glm-4.6", "glm-4.5-air"], // z.ai GLM modelleri
   openai: ["gpt-4o", "gpt-4o-mini"],
 };
 
