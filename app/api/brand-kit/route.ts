@@ -4,36 +4,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { DEFAULT_BRAND_KIT, BRAND_KIT_FIELDS, type BrandKit } from "@/lib/brand-kit";
 
 export const runtime = "nodejs";
-
-export type BrandKit = {
-  primaryColor?: string;   // #hex
-  accentColor?: string;
-  bgColor?: string;
-  fontFamily?: string;     // "Inter" | "Poppins" | "Montserrat" | "Roboto" | custom
-  logoUrl?: string;        // R2 url
-  watermark?: boolean;     // true -> exporta logo overlay'i ekle
-  watermarkPosition?: "tl" | "tr" | "bl" | "br";
-  intro?: string;          // intro video url (export basinda eklenir)
-  outro?: string;          // outro url
-  defaultAspect?: string;  // "16:9" | "9:16" | ...
-  defaultResolution?: string; // "720p" | "1080p" | "4K"
-  globalStyle?: string;    // varsayilan sinematik stil
-  voicePreference?: string;// kullanici sevdigi voice model
-};
-
-export const DEFAULT_BRAND_KIT: BrandKit = {
-  primaryColor: "#A855F7",
-  accentColor: "#F59E0B",
-  bgColor: "#0A0A0B",
-  fontFamily: "Inter",
-  watermark: false,
-  watermarkPosition: "br",
-  defaultAspect: "16:9",
-  defaultResolution: "720p",
-  globalStyle: "",
-};
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -47,14 +20,8 @@ export async function PUT(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as Partial<BrandKit>;
-  // Sadece izin verilen alanlar
-  const allowed: (keyof BrandKit)[] = [
-    "primaryColor", "accentColor", "bgColor", "fontFamily", "logoUrl",
-    "watermark", "watermarkPosition", "intro", "outro",
-    "defaultAspect", "defaultResolution", "globalStyle", "voicePreference",
-  ];
   const cleaned: BrandKit = {};
-  for (const k of allowed) {
+  for (const k of BRAND_KIT_FIELDS) {
     if (k in body) (cleaned as any)[k] = (body as any)[k];
   }
   const existing = await prisma.user.findUnique({ where: { id: user.id }, select: { brandKit: true } });
