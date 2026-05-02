@@ -29,6 +29,22 @@ export function CaptionsTab() {
   const [voicing, setVoicing] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [voiceLanguage, setVoiceLanguage] = useState(language);
+
+  const VOICE_LANGUAGES = [
+    { code: "Türkçe", label: "Türkçe (TR)" },
+    { code: "English", label: "English (EN)" },
+    { code: "Español", label: "Español (ES)" },
+    { code: "Français", label: "Français (FR)" },
+    { code: "Deutsch", label: "Deutsch (DE)" },
+    { code: "Italiano", label: "Italiano (IT)" },
+    { code: "Português", label: "Português (PT)" },
+    { code: "Русский", label: "Русский (RU)" },
+    { code: "日本語", label: "日本語 (JA)" },
+    { code: "한국어", label: "한국어 (KO)" },
+    { code: "中文", label: "中文 (ZH)" },
+    { code: "العربية", label: "العربية (AR)" },
+  ];
 
   const audioClips = useMemo(
     () => clips.filter((c) => c.trackId === "audio" && c.sourceUrl),
@@ -150,14 +166,38 @@ export function CaptionsTab() {
     setVoicing(true);
     setStatus(null);
     try {
+      const langCodeMap: Record<string, string> = {
+        Türkçe: "tr", English: "en", Español: "es", Français: "fr",
+        Deutsch: "de", Italiano: "it", Português: "pt", Русский: "ru",
+        日本語: "ja", 한국어: "ko", 中文: "zh", العربية: "ar",
+      };
+      const sourceCode = langCodeMap[language] || "tr";
+      const targetCode = langCodeMap[voiceLanguage] || sourceCode;
+
       const results = await Promise.allSettled(
         subtitleClips.map(async (c) => {
-          const text = (c.text ?? "").trim();
+          let text = (c.text ?? "").trim();
           if (!text) return { clip: c, audioUrl: null as string | null };
+
+          // Hedef dil kaynak dilden farklıysa önce translate et
+          if (targetCode !== sourceCode) {
+            try {
+              const tr = await fetch("/api/translate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text, source: sourceCode, target: targetCode }),
+              });
+              const trData = await tr.json();
+              if (tr.ok && trData.translated) text = trData.translated;
+            } catch {
+              // çeviri patlarsa orijinal metin kullanılır
+            }
+          }
+
           const res = await fetch("/api/kie/voice", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, voiceModel, language }),
+            body: JSON.stringify({ text, voiceModel, language: voiceLanguage }),
           });
           if (!res.ok) throw new Error("Ses üretimi başarısız");
           const data = await res.json();
@@ -250,6 +290,29 @@ export function CaptionsTab() {
           Sahnelerden Otomatik Üret
         </button>
 
+        <div>
+          <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+            Seslendirme Dili
+          </label>
+          <select
+            value={voiceLanguage}
+            onChange={(e) => setVoiceLanguage(e.target.value)}
+            className="mt-1 w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-amber-500/40"
+          >
+            {VOICE_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+                {l.code !== language ? " — otomatik çevir" : ""}
+              </option>
+            ))}
+          </select>
+          {voiceLanguage !== language && (
+            <div className="mt-1 text-[10px] text-cyan-300">
+              ℹ️ Altyazılar {language} dilinde, ses {voiceLanguage} olarak çevrilip üretilecek.
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleDownloadSrt}
@@ -268,7 +331,7 @@ export function CaptionsTab() {
             ) : (
               <Volume2 className="h-4 w-4 text-emerald-400" />
             )}
-            Tümünü Seslendir
+            Seslendir
           </button>
         </div>
       </div>

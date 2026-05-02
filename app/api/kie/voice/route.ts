@@ -7,6 +7,29 @@ import { NextResponse } from "next/server";
 import { chargeForGeneration } from "@/lib/charge-helper";
 import { createTask } from "@/lib/kie";
 
+// Display language → ISO 639-1 code (ElevenLabs Multilingual destekler)
+const LANG_CODE_MAP: Record<string, string> = {
+  Türkçe: "tr", "Türkçe (TR)": "tr", tr: "tr", TR: "tr",
+  English: "en", İngilizce: "en", en: "en", EN: "en",
+  Español: "es", İspanyolca: "es", es: "es",
+  Français: "fr", Fransızca: "fr", fr: "fr",
+  Deutsch: "de", Almanca: "de", de: "de",
+  Italiano: "it", İtalyanca: "it", it: "it",
+  Português: "pt", Portekizce: "pt", pt: "pt",
+  Русский: "ru", Rusça: "ru", ru: "ru",
+  日本語: "ja", Japonca: "ja", ja: "ja",
+  한국어: "ko", Korece: "ko", ko: "ko",
+  中文: "zh", Çince: "zh", zh: "zh",
+  العربية: "ar", Arapça: "ar", ar: "ar",
+  हिन्दी: "hi", Hintçe: "hi", hi: "hi",
+  Polski: "pl", Lehçe: "pl", pl: "pl",
+  Nederlands: "nl", Felemenkçe: "nl", nl: "nl",
+};
+
+function mapLanguage(lang: string): string {
+  return LANG_CODE_MAP[lang] || LANG_CODE_MAP[lang?.toLowerCase?.() || ""] || "tr";
+}
+
 const VOICE_MODEL_MAP: Record<string, string> = {
   // Display name → Kie modelDisplayName (catalog'da var)
   "Eleven Labs V3": "ElevenLabs Text-to-Dialogue V3",
@@ -81,8 +104,7 @@ export async function POST(req: Request) {
         model: modelId,
         input: {
           text,
-          // Türkçe için multilingual gerekli; turbo İngilizce ağırlıklı ama Türkçe kabul eder
-          language_code: language === "Türkçe" ? "tr" : language === "English" ? "en" : "tr",
+          language_code: mapLanguage(language),
         },
       }),
     });
