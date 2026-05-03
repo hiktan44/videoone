@@ -135,7 +135,11 @@ async function generateScene(
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return { ok: false, error: `Kie video create ${res.status}: ${text || res.statusText}` };
+      // Bakiye hatasını net ileti ile dön
+      if (res.status === 402 || /yetersiz|insufficient|balance/i.test(text)) {
+        return { ok: false, error: "Kie.ai bakiyeniz yetersiz — para yatırın (kie.ai)" };
+      }
+      return { ok: false, error: `Kie video create ${res.status}: ${text.slice(0, 200) || res.statusText}` };
     }
     const data = (await res.json()) as { taskId?: string; family?: string; error?: string };
     if (!data.taskId || !data.family) {
