@@ -12,6 +12,8 @@ type Props = {
 export function ExportModal({ open, onClose }: Props) {
   const projectId = useStore((s) => s.projectId);
   const settings = useStore((s) => s.settings);
+  const clips = useStore((s) => s.clips);
+  const exportableClips = clips.filter((c) => c.trackId === "video" && c.sourceUrl);
   const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
   const [aspectRatio, setAspectRatio] = useState(settings.aspectRatio || "16:9");
   const [jobId, setJobId] = useState<string | null>(null);
@@ -40,13 +42,30 @@ export function ExportModal({ open, onClose }: Props) {
 
   const start = async () => {
     if (!projectId) {
-      setError("Önce bir projeyi kaydet");
+      setError("Proje henüz kaydedilmedi. Editörü kapatıp tekrar açın.");
+      return;
+    }
+    if (exportableClips.length === 0) {
+      setError(
+        "Export için en az 1 video klibi gerekli. Timeline boş veya kliplerde sourceUrl yok. Bir AI üretim yapın veya 'Değiştir' ile dosya yükleyin."
+      );
       return;
     }
     setError(null);
     setStatus("running");
     setProgress(0);
     try {
+      // Önce projeyi DB'ye senkronize et — store'daki clips DB'ye yansısın
+      try {
+        const { apiUpsert } = await import("@/lib/persistence");
+        const { useStore: us } = await import("@/lib/store");
+        const s = us.getState();
+        const proj = s.exportCurrentAsProject?.();
+        if (proj) await apiUpsert(proj);
+      } catch (syncErr) {
+        console.warn("[export] sync warning:", syncErr);
+      }
+
       const res = await fetch(`/api/projects/${projectId}/export`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,7 +73,7 @@ export function ExportModal({ open, onClose }: Props) {
       });
       const data = await res.json();
       if (!res.ok || !data.jobId) {
-        setError(data.error || "Export başlatılamadı");
+        setError(data.error || `Export başlatılamadı (HTTP ${res.status})`);
         setStatus("idle");
         return;
       }
@@ -100,6 +119,15 @@ export function ExportModal({ open, onClose }: Props) {
         <div className="p-5 space-y-4">
           {status === "idle" && (
             <>
+              <div className={
+                exportableClips.length === 0
+                  ? "rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+                  : "rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200"
+              }>
+                {exportableClips.length === 0
+                  ? "⚠️ Timeline'da export edilebilir video klibi yok. Önce AI üretim yapın veya 'Değiştir' ile dosya yükleyin."
+                  : `✓ ${exportableClips.length} video klibi export edilecek (toplam ${exportableClips.reduce((s, c) => s + c.duration, 0).toFixed(1)} sn)`}
+              </div>
               <div>
                 <label className="text-[11px] font-semibold text-ink-300 uppercase tracking-wider">
                   Çözünürlük
@@ -203,7 +231,8 @@ export function ExportModal({ open, onClose }: Props) {
               </button>
               <button
                 onClick={start}
-                className="text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-ink-950 px-4 py-2 transition-colors"
+                disabled={exportableClips.length === 0}
+                className="text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-ink-950 px-4 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Export Başlat
               </button>

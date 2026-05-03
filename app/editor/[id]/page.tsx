@@ -26,6 +26,8 @@ import { SettingsTab } from "@/components/tabs/SettingsTab";
 import { VersionHistory } from "@/components/VersionHistory";
 import { useUndoHistory } from "@/lib/useUndoHistory";
 import { History } from "lucide-react";
+import { EditorProgressBar } from "@/components/EditorProgressBar";
+import { JobPollingSubscriber } from "@/components/JobPollingSubscriber";
 
 export default function EditorPage() {
   const params = useParams<{ id: string }>();
@@ -85,9 +87,25 @@ export default function EditorPage() {
     );
   }
 
+  // Editör mount olduğunda store.jobs'taki running job'lar için polling/SSE devam etsin
+  const jobs = useStore((s) => s.jobs);
+  const pollingJobs = jobs.filter(
+    (j) => j.taskId && (j.status === "running" || j.status === "idle")
+  );
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-zinc-950">
+      {pollingJobs.map((j) => (
+        <JobPollingSubscriber
+          key={j.id}
+          jobId={j.id}
+          taskId={j.taskId!}
+          prompt={j.prompt}
+          family={j.family}
+        />
+      ))}
       <EditorTopBar />
+      <EditorProgressBar />
 
       {/* Sürüm geçmişi açma butonu - sağ üstte sabit */}
       <button
