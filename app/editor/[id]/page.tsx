@@ -41,6 +41,12 @@ export default function EditorPage() {
   // Undo/redo + Cmd+Z keyboard handler (loaded olmadan da hook çağrılabilir, projectId yoksa noop)
   useUndoHistory(loaded ? params?.id : undefined);
 
+  // TÜM HOOK'LAR conditional return'den ÖNCE — Rules of Hooks
+  const jobs = useStore((s) => s.jobs);
+  const pollingJobs = jobs.filter(
+    (j) => j.taskId && (j.status === "running" || j.status === "idle")
+  );
+
   useEffect(() => {
     if (!params?.id) return;
     let cancelled = false;
@@ -86,12 +92,6 @@ export default function EditorPage() {
       </div>
     );
   }
-
-  // Editör mount olduğunda store.jobs'taki running job'lar için polling/SSE devam etsin
-  const jobs = useStore((s) => s.jobs);
-  const pollingJobs = jobs.filter(
-    (j) => j.taskId && (j.status === "running" || j.status === "idle")
-  );
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-zinc-950">
