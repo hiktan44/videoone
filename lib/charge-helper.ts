@@ -24,6 +24,11 @@ export async function chargeForGeneration(opts: {
   if (!user) {
     return { userId: null, amount: 0, refund: async () => {} };
   }
+  // Admin: kredi düşmesin (sınırsız test). Sadece bilgilendirme amaçlı log.
+  if (user.role === "admin") {
+    console.log(`[charge] admin bypass: ${user.email} ${opts.kind} ${opts.modelDisplayName}`);
+    return { userId: user.id, amount: 0, refund: async () => {} };
+  }
   const tier = (user.plan as "fast" | "pro" | "max") || "pro";
   const amount = estimateCost(opts.kind, opts.durationSec || 5, tier, opts.resolution);
   await chargeCredits({

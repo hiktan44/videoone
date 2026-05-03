@@ -45,9 +45,15 @@ export async function POST(req: Request) {
         modelDisplayName,
         resolution,
       });
-    } catch {
+    } catch (err) {
+      // Bu HATA UYGULAMA İÇİ KREDİDEN — Kie'ye hiç ulaşılmıyor
+      const msg = err instanceof Error ? err.message : "?";
+      console.error("[/api/kie/video CHARGE FAIL]", { msg, model: modelDisplayName });
       return NextResponse.json(
-        { error: "Yetersiz kredi. Lütfen plan yükselt veya bekle." },
+        {
+          error: `Uygulama içi krediniz yetersiz (${msg}). Kie.ai'ya gönderilmedi. Krediler /pricing'den alınabilir veya admin'den isteyin.`,
+          appCreditError: true,
+        },
         { status: 402 }
       );
     }
