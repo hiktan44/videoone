@@ -169,13 +169,21 @@ export function ScenarioWizard({
   useEffect(() => {
     if (open) {
       if (initialTopic !== undefined) setTopic(initialTopic);
-      if (initialDurationSec !== undefined) setTotalDurationSec(initialDurationSec);
       if (initialModel) setModelDisplayName(initialModel);
       if (initialAspectRatio) setAspectRatio(initialAspectRatio);
-      // Süre model max'ı aşmıyorsa varsayılan olarak Tek Sahne öner
-      const dur = initialDurationSec || totalDurationSec;
+
+      // Süre + mod kararı:
       const max = perSceneMaxFor(initialModel || modelDisplayName);
-      setMode(dur <= max ? "single" : "multi");
+      const requested = initialDurationSec || totalDurationSec;
+      if (requested <= max) {
+        // Tek sahne — model max'ında üret (kullanıcının istediği gibi)
+        setMode("single");
+        setTotalDurationSec(max);
+      } else {
+        // Senaryolu — kullanıcının istediği toplam süre
+        setMode("multi");
+        setTotalDurationSec(requested);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -472,7 +480,11 @@ function Step1Setup(props: {
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-1 grid grid-cols-2 gap-1">
         <button
           type="button"
-          onClick={() => setMode("single")}
+          onClick={() => {
+            setMode("single");
+            // Tek sahneye geçince süreyi model max'ına ayarla
+            setTotalDurationSec(perSceneMaxSec);
+          }}
           className={`rounded-lg px-3 py-2.5 text-sm transition-colors ${
             mode === "single"
               ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow"
@@ -486,7 +498,13 @@ function Step1Setup(props: {
         </button>
         <button
           type="button"
-          onClick={() => setMode("multi")}
+          onClick={() => {
+            setMode("multi");
+            // Çoklu sahneye geçince süreyi en az 2 sahneye yetecek seviyeye al
+            if (totalDurationSec < perSceneMaxSec * 2) {
+              setTotalDurationSec(perSceneMaxSec * 4);
+            }
+          }}
           className={`rounded-lg px-3 py-2.5 text-sm transition-colors ${
             mode === "multi"
               ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow"
@@ -531,24 +549,36 @@ function Step1Setup(props: {
       {/* Sure */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-xs font-medium text-zinc-400">Hedef süre</label>
+          <label className="block text-xs font-medium text-zinc-400">
+            {mode === "single" ? `Süre (max ${perSceneMaxSec} sn)` : "Hedef süre"}
+          </label>
           <span className="text-xs font-medium text-purple-300">
-            {durationLabel(totalDurationSec)}
+            {totalDurationSec} sn
+            {mode === "multi" && ` · ${Math.ceil(totalDurationSec / perSceneMaxSec)} sahne × ${perSceneMaxSec} sn`}
           </span>
         </div>
         <input
           type="range"
-          min={15}
-          max={180}
-          step={5}
-          value={totalDurationSec}
+          min={mode === "single" ? 3 : perSceneMaxSec}
+          max={mode === "single" ? perSceneMaxSec : 180}
+          step={mode === "single" ? 1 : perSceneMaxSec}
+          value={Math.min(
+            mode === "single" ? perSceneMaxSec : 180,
+            Math.max(mode === "single" ? 3 : perSceneMaxSec, totalDurationSec)
+          )}
           onChange={(e) => setTotalDurationSec(Number(e.target.value))}
           className="w-full accent-purple-500"
         />
         <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
-          <span>15 sn</span>
-          <span>3 dk</span>
+          <span>{mode === "single" ? "3 sn" : `${perSceneMaxSec} sn`}</span>
+          <span>{mode === "single" ? `${perSceneMaxSec} sn` : "3 dk"}</span>
         </div>
+        {mode === "single" && (
+          <div className="text-[10px] text-zinc-500 mt-1.5 px-1">
+            💡 Tek sahnede üretilebilen maksimum süre modele göre değişir.
+            Daha uzun video için <strong className="text-purple-300">Senaryolu</strong> moda geç.
+          </div>
+        )}
       </div>
 
       {/* Model */}
