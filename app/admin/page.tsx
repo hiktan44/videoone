@@ -97,7 +97,13 @@ export default async function AdminPage() {
               href="/admin/users"
               className="ml-4 text-xs text-cyan-300 hover:text-cyan-200"
             >
-              Kullanıcı Yönetimi →
+              Kullanıcılar →
+            </Link>
+            <Link
+              href="/admin/templates"
+              className="ml-2 text-xs text-amber-300 hover:text-amber-200"
+            >
+              Şablonlar →
             </Link>
           </div>
           <div className="text-xs text-ink-400">

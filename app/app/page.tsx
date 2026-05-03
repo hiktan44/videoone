@@ -19,6 +19,7 @@ import {
 import { makeSampleProject, type Project } from "@/lib/mocks";
 import { BUILTIN_TEMPLATES, templateToProject, type BuiltinTemplate } from "@/lib/builtin-templates";
 import { RecentGenerations } from "@/components/RecentGenerations";
+import { TemplateGallery } from "@/components/TemplateGallery";
 import { ArrowRight, Sparkles, Zap, Trophy, Plus, Play } from "lucide-react";
 import clsx from "clsx";
 
@@ -271,37 +272,8 @@ export default function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-4">
-                {BUILTIN_TEMPLATES.map((tpl) => (
-                  <button
-                    key={tpl.id}
-                    onClick={() => handleUseTemplate(tpl)}
-                    className="group text-left rounded-2xl border border-zinc-800/80 bg-zinc-900/40 hover:border-purple-500/50 hover:bg-zinc-900/80 transition-all overflow-hidden hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-1"
-                  >
-                    <div className={clsx("aspect-[16/10] bg-gradient-to-br relative overflow-hidden", tpl.gradient)}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur text-[10px] font-semibold text-white">
-                        {tpl.category}
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <div className="text-white text-base font-bold drop-shadow-lg">{tpl.name}</div>
-                        <div className="text-white/80 text-[11px] drop-shadow flex items-center gap-2">
-                          <span>{tpl.duration} sn</span>
-                          <span>·</span>
-                          <span>{tpl.aspectRatio}</span>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="h-14 w-14 rounded-full bg-white/95 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Play className="h-6 w-6 text-purple-700 ml-0.5" fill="currentColor" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">{tpl.description}</div>
-                    </div>
-                  </button>
-                ))}
+              <div className="mt-5">
+                <TemplateGallery />
               </div>
             )}
           </div>
