@@ -124,11 +124,13 @@ export function buildScenePrompt(
   return parts.join(". ");
 }
 
-// Hedef toplam sureye gore ideal sahne sayisi (kabaca).
-// Kling 3.0 / Seedance 2 = 15 sn; Veo Fast = 10 sn; cogu = 5-8 sn.
+// Hedef toplam sureye gore ideal sahne sayisi.
+// Tum sahneler model max'inda olur, ceil ile yukari yuvarlanir.
+// Ornek: 60sn / 15sn (Kling 3.0 Pro) = 4 sahne (60sn tam)
+//        50sn / 15sn = 4 sahne (60sn — biraz uzun ama tum sahneler 15sn max kalitede)
 export function suggestSceneCount(totalSec: number, perSceneMaxSec: number): number {
   const ideal = Math.ceil(totalSec / perSceneMaxSec);
-  return Math.max(3, Math.min(20, ideal));
+  return Math.max(1, Math.min(20, ideal));
 }
 
 // Eger Kie agent yoksa kullanilan basit fallback senaryosu — konu adindan jenerik 12 sahne uretir.
@@ -139,7 +141,8 @@ export function fallbackStoryboard(
   perSceneMax: number
 ): Storyboard {
   const sceneCount = suggestSceneCount(totalSec, perSceneMax);
-  const baseDuration = Math.max(3, Math.min(perSceneMax, Math.round(totalSec / sceneCount)));
+  // TUM sahneler model max suresinde — her sahne maksimum kalitede uretilsin.
+  const baseDuration = perSceneMax;
   const angles: CameraAngle[] = ["wide-establishing", "medium-shot", "close-up", "tracking-shot", "low-angle", "drone-aerial"];
   const transitions: Transition[] = ["smooth-fade", "match-cut", "whip-pan", "hard-cut", "dissolve"];
   const now = Date.now();

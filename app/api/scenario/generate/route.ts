@@ -38,8 +38,8 @@ OUTPUT (return ONLY valid JSON, no markdown, no prose):
 }
 
 CRITICAL RULES:
-- Total scene duration MUST be within ±10% of target totalDurationSec.
-- Use the per-scene maximum as upper bound for each durationSec.
+- EVERY scene's durationSec MUST equal the per-scene maximum (use it for ALL scenes).
+- Number of scenes = ceil(totalDurationSec / perSceneMaxSec). Total may slightly exceed target — that's fine.
 - Vary camera angles — don't use the same angle twice in a row.
 - The last scene's transitionAfter is ignored, set it to "fade-to-black".
 - Each scene's prompt MUST be uniquely written, not a copy of the user topic.
@@ -71,8 +71,8 @@ async function callOpenAI(input: GenInput): Promise<{ scenes?: Scene[]; error?: 
   try {
     const userPrompt = `Topic (in Turkish): ${input.topic}
 Target total duration: ${input.totalDurationSec} seconds
-Per-scene maximum: ${input.perSceneMaxSec} seconds
-Suggested scene count: ${Math.max(3, Math.ceil(input.totalDurationSec / input.perSceneMaxSec))}
+Per-scene duration (use this for ALL scenes): ${input.perSceneMaxSec} seconds
+Number of scenes (must match exactly): ${Math.max(1, Math.ceil(input.totalDurationSec / input.perSceneMaxSec))}
 Title language: ${input.language || "Türkçe"}
 
 Design the storyboard now. Return STRICT JSON only with shape: {"scenes":[{"title":"","prompt":"","durationSec":5,"cameraAngle":"wide-establishing","transitionAfter":"smooth-fade"}]}`;
@@ -107,7 +107,8 @@ Design the storyboard now. Return STRICT JSON only with shape: {"scenes":[{"titl
       index: i + 1,
       title: String(s?.title || `Sahne ${i + 1}`).slice(0, 80),
       prompt: String(s?.prompt || `Scene ${i + 1}`),
-      durationSec: clampDuration(Number(s?.durationSec) || 5, input.perSceneMaxSec),
+      // Tum sahneleri model max'ina sabitle (kullanici talebine gore en yuksek kalite)
+      durationSec: input.perSceneMaxSec,
       cameraAngle: VALID_ANGLES.includes(s?.cameraAngle) ? s.cameraAngle : "medium-shot",
       transitionAfter:
         i < scenesRaw.length - 1
@@ -122,8 +123,9 @@ Design the storyboard now. Return STRICT JSON only with shape: {"scenes":[{"titl
 
 // Eger OpenAI calismazsa: Akilli fallback. Konuyu analiz et, narrative arc uygula.
 function smartFallback(topic: string, totalSec: number, perSceneMax: number): Scene[] {
-  const sceneCount = Math.max(3, Math.min(20, Math.ceil(totalSec / perSceneMax)));
-  const baseDuration = Math.max(3, Math.min(perSceneMax, Math.round(totalSec / sceneCount)));
+  const sceneCount = Math.max(1, Math.min(20, Math.ceil(totalSec / perSceneMax)));
+  // Tum sahneler model max'inda
+  const baseDuration = perSceneMax;
   const now = Date.now();
   const t = topic.trim();
 
