@@ -192,9 +192,9 @@ export function templateToProject(tpl: BuiltinTemplate): Omit<Project, "id"> {
     chatMessages: [
       {
         id: `m-${now}`,
-        author: "ai",
-        text: `Şablon yüklendi: **${tpl.name}**\n\nÖneri prompt:\n_${tpl.starterPrompt}_\n\n"Senaryo Sihirbazı" ile sahnelere bölmek veya direkt üretim yapmak için sohbete yazın.`,
-        time: "şimdi",
+        role: "assistant",
+        content: `Şablon yüklendi: **${tpl.name}**\n\nÖneri prompt:\n_${tpl.starterPrompt}_\n\n"Senaryo Sihirbazı" ile sahnelere bölmek veya direkt üretim yapmak için sohbete yazın.`,
+        meta: "şimdi",
       },
     ],
     mediaItems: [],
