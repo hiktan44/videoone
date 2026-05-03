@@ -126,6 +126,9 @@ export function ScenarioWizard({
   const [globalStyle] = useState<string>(
     "cinematic lighting, professional color grading, smooth camera movement"
   );
+  // Tek Sahne mod: AI ile sahnelere bölmek yerine, tüm süre tek bir sahne olarak üretilir.
+  // Kısa videolarda (≤ model max) varsayılan olarak açık.
+  const [mode, setMode] = useState<"single" | "multi">("multi");
 
   // Adim 2 state
   const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
@@ -169,6 +172,10 @@ export function ScenarioWizard({
       if (initialDurationSec !== undefined) setTotalDurationSec(initialDurationSec);
       if (initialModel) setModelDisplayName(initialModel);
       if (initialAspectRatio) setAspectRatio(initialAspectRatio);
+      // Süre model max'ı aşmıyorsa varsayılan olarak Tek Sahne öner
+      const dur = initialDurationSec || totalDurationSec;
+      const max = perSceneMaxFor(initialModel || modelDisplayName);
+      setMode(dur <= max ? "single" : "multi");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -193,6 +200,39 @@ export function ScenarioWizard({
     setError(null);
     setGenerating(true);
     try {
+      // TEK SAHNE: API'ye gerek yok, doğrudan tek sahnelik storyboard kur.
+      if (mode === "single") {
+        const cleanPrompt = topic.trim();
+        if (!cleanPrompt) {
+          throw new Error("Lütfen video konusu/promptu yazın.");
+        }
+        const dur = Math.max(3, Math.min(perSceneMaxSec, totalDurationSec));
+        const sb: Storyboard = {
+          id: `sb-single-${Date.now()}`,
+          topic: cleanPrompt,
+          totalDurationSec: dur,
+          modelDisplayName,
+          language,
+          globalStyle,
+          createdAt: Date.now(),
+          scenes: [
+            {
+              id: `sc-${Date.now()}`,
+              index: 1,
+              title: cleanPrompt.slice(0, 40),
+              prompt: cleanPrompt,
+              durationSec: dur,
+              cameraAngle: "medium-shot",
+              aspectRatio,
+            },
+          ],
+        };
+        setStoryboard(sb);
+        setStep(2);
+        setGenerating(false);
+        return;
+      }
+
       const res = await fetch("/api/scenario/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -344,6 +384,8 @@ export function ScenarioWizard({
               setAspectRatio={setAspectRatio}
               suggestedSceneCount={suggestedSceneCount}
               perSceneMaxSec={perSceneMaxSec}
+              mode={mode}
+              setMode={setMode}
               error={error}
               generating={generating}
               onGenerate={handleGenerate}
@@ -395,6 +437,8 @@ function Step1Setup(props: {
   setAspectRatio: (v: string) => void;
   suggestedSceneCount: number;
   perSceneMaxSec: number;
+  mode: "single" | "multi";
+  setMode: (m: "single" | "multi") => void;
   error: string | null;
   generating: boolean;
   onGenerate: () => void;
@@ -411,6 +455,8 @@ function Step1Setup(props: {
     setAspectRatio,
     suggestedSceneCount,
     perSceneMaxSec,
+    mode,
+    setMode,
     error,
     generating,
     onGenerate,
@@ -418,9 +464,53 @@ function Step1Setup(props: {
   } = props;
 
   const canGenerate = topic.trim().length > 0 && !generating;
+  const fitsInOneScene = totalDurationSec <= perSceneMaxSec;
 
   return (
     <div className="space-y-5">
+      {/* MOD SECICI */}
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-1 grid grid-cols-2 gap-1">
+        <button
+          type="button"
+          onClick={() => setMode("single")}
+          className={`rounded-lg px-3 py-2.5 text-sm transition-colors ${
+            mode === "single"
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow"
+              : "text-zinc-300 hover:bg-zinc-800"
+          }`}
+        >
+          ⚡ Tek Sahne
+          <div className="text-[10px] opacity-80 mt-0.5 font-normal">
+            Hızlı · {perSceneMaxSec} sn'ye kadar
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("multi")}
+          className={`rounded-lg px-3 py-2.5 text-sm transition-colors ${
+            mode === "multi"
+              ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow"
+              : "text-zinc-300 hover:bg-zinc-800"
+          }`}
+        >
+          🎬 Senaryolu (Çoklu Sahne)
+          <div className="text-[10px] opacity-80 mt-0.5 font-normal">
+            AI sahnelere böler · uzun video
+          </div>
+        </button>
+      </div>
+      {mode === "single" && !fitsInOneScene && (
+        <div className="text-[11px] text-amber-300 px-1">
+          ⚠️ Süre <strong>{perSceneMaxSec} sn</strong>'ye düşürülecek (modelin tek sahne sınırı).
+          Daha uzun istiyorsan <strong>Senaryolu</strong> moda geç.
+        </div>
+      )}
+      {mode === "multi" && fitsInOneScene && (
+        <div className="text-[11px] text-zinc-400 px-1">
+          💡 Bu süre tek sahnede üretilebilir. <strong>Tek Sahne</strong> daha hızlı + ucuz olur.
+        </div>
+      )}
+
       {/* Konu */}
       <div>
         <label className="block text-xs font-medium text-zinc-400 mb-1.5">
@@ -541,6 +631,11 @@ function Step1Setup(props: {
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Üretiliyor...
+            </>
+          ) : mode === "single" ? (
+            <>
+              <Wand2 className="h-4 w-4" />
+              Tek Sahne Üret
             </>
           ) : (
             <>
