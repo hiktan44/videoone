@@ -64,19 +64,9 @@ export async function POST(req: Request) {
     });
     if (task.status === "failed") {
       await charge.refund();
-      // Kie bakiye/yetersiz kredi hatasını HTTP 402 ile dön — UI bunu özel ele alır
-      const isBalance = /yetersiz kredi|insufficient|balance|payment/i.test(task.error || "");
-      const status = isBalance ? 402 : 502;
-      return NextResponse.json(
-        {
-          ...task,
-          error: isBalance
-            ? "Kie.ai hesabınızda yetersiz bakiye. Lütfen Kie hesabınıza para yatırın (https://kie.ai)."
-            : task.error,
-          isBalance,
-        },
-        { status }
-      );
+      // Kie'nin gerçek hata mesajını DEĞİŞTİRMEDEN dön — yanıltıcı mapping yapma
+      console.error("[/api/kie/video FAIL]", { model: modelDisplayName, error: task.error });
+      return NextResponse.json(task, { status: 502 });
     }
     return NextResponse.json(task);
   } catch (e) {

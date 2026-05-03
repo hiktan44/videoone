@@ -79,10 +79,6 @@ export function EditorProgressBar() {
   const running = recent.filter((j) => j.status === "running" || j.status === "idle");
   const succeeded = recent.filter((j) => j.status === "succeeded");
   const failed = recent.filter((j) => j.status === "failed");
-  // Bakiye/yetersiz kredi hatası — kullanıcıya kalıcı uyarı için ayrı işaretle
-  const balanceFails = failed.filter((j) =>
-    /yetersiz|bakiye|insufficient|balance|payment|402/i.test(j.error || "")
-  );
 
   if (recent.length === 0) return null;
 
@@ -178,23 +174,6 @@ export function EditorProgressBar() {
             </button>
           </div>
         </div>
-      </div>
-    )}
-    {balanceFails.length > 0 && (
-      <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2.5 flex items-center gap-3">
-        <span className="text-lg">💳</span>
-        <div className="flex-1 text-sm">
-          <strong className="text-rose-200">Kie.ai bakiyeniz yetersiz</strong>{" "}
-          <span className="text-rose-300/80">— üretimler başarısız oluyor.</span>
-        </div>
-        <a
-          href="https://kie.ai/dashboard/billing"
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-semibold rounded-md bg-rose-500 hover:bg-rose-400 text-white px-3 py-1.5"
-        >
-          Kie.ai → Bakiye Ekle
-        </a>
       </div>
     )}
     <div className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">

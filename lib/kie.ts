@@ -346,6 +346,8 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
     return { taskId, status: "running", family: map.family };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Bilinmeyen hata";
+    // Konsola Kie'nin tam mesajını yaz — Coolify log'larında görmek için
+    console.error("[kie createTask FAIL]", { model: map?.jobsModelId, msg });
     return { taskId: "error", status: "failed", error: msg };
   }
 }
