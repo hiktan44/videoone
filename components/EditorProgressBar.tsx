@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, Film } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, CheckCircle2, XCircle, Film, Search, Ban } from "lucide-react";
 import clsx from "clsx";
 
 // Editör üst kısmında mount edilen kompakt ilerleme barı.
@@ -10,7 +10,41 @@ import clsx from "clsx";
 // Tek satır özet + tıklayarak detayları aç/kapat.
 export function EditorProgressBar() {
   const jobs = useStore((s) => s.jobs);
+  const updateJob = useStore((s) => s.updateJob);
   const [expanded, setExpanded] = useState(false);
+  const [checking, setChecking] = useState<string | null>(null);
+
+  const checkKie = async (jobId: string, taskId: string, family: string | undefined) => {
+    setChecking(jobId);
+    try {
+      // Queue jobs için /api/jobs/[id], değilse /api/kie/poll
+      const isQueue = family === "queue";
+      const url = isQueue
+        ? `/api/jobs/${taskId}`
+        : `/api/kie/poll?taskId=${encodeURIComponent(taskId)}&family=${encodeURIComponent(family || "jobs")}`;
+      const r = await fetch(url);
+      const data = await r.json().catch(() => ({}));
+      const summary = isQueue
+        ? `Status: ${data.job?.status || "?"}\nProgress: ${data.job?.progress ?? "?"}%\nResultURL: ${data.job?.resultUrl || "yok"}\nError: ${data.job?.error || "yok"}`
+        : `Status: ${data.status || "?"}\nResultURL: ${data.resultUrl || "yok"}\nError: ${data.error || "yok"}\nFamily: ${family}\nTaskID: ${taskId}`;
+      alert(`Kie/Queue Durumu:\n\n${summary}\n\nHTTP ${r.status}`);
+      // Eğer succeeded ise local'i de güncelle
+      if (data.status === "succeeded" || data.job?.status === "succeeded") {
+        updateJob(jobId, { status: "succeeded", resultUrl: data.resultUrl || data.job?.resultUrl });
+      } else if (data.status === "failed" || data.job?.status === "failed") {
+        updateJob(jobId, { status: "failed", error: data.error || data.job?.error });
+      }
+    } catch (e) {
+      alert(`Kontrol hatası: ${e instanceof Error ? e.message : "?"}`);
+    } finally {
+      setChecking(null);
+    }
+  };
+
+  const cancelLocal = (jobId: string) => {
+    if (!confirm("Bu job'ı yerel olarak iptal etmek istediğine emin misin? (Kie'deki gerçek task etkilenmez, sadece UI'dan kaldırılır)")) return;
+    updateJob(jobId, { status: "failed", error: "Kullanıcı tarafından iptal edildi" });
+  };
 
   // Son 30 dk içindeki + aktif/biten işler
   const recent = jobs
@@ -81,6 +115,21 @@ export function EditorProgressBar() {
 
       {expanded && (
         <div className="px-4 pb-3 max-h-48 overflow-y-auto">
+          {running.length > 1 && (
+            <div className="flex items-center justify-end mb-1">
+              <button
+                onClick={() => {
+                  if (confirm(`${running.length} aktif job iptal edilsin mi? (yerel UI'dan kaldırılır)`)) {
+                    running.forEach((j) => updateJob(j.id, { status: "failed", error: "Toplu iptal" }));
+                  }
+                }}
+                className="text-[10px] text-rose-300 hover:text-rose-200 inline-flex items-center gap-1"
+              >
+                <Ban className="h-2.5 w-2.5" />
+                Tümünü iptal et ({running.length})
+              </button>
+            </div>
+          )}
           <ul className="space-y-1 text-xs">
             {recent.slice(0, 12).map((j) => (
               <li key={j.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-900/50">
@@ -93,11 +142,36 @@ export function EditorProgressBar() {
                 )}
                 <span className="text-[10px] uppercase text-zinc-500 shrink-0">{j.kind}</span>
                 <span className="text-zinc-200 truncate flex-1">{j.prompt || "(prompt yok)"}</span>
+                {j.taskId && (
+                  <span className="text-[9px] text-zinc-600 font-mono shrink-0" title={`taskId: ${j.taskId}\nfamily: ${j.family || "?"}`}>
+                    {(j.taskId as string).slice(0, 8)}…
+                  </span>
+                )}
                 {j.error ? (
-                  <span className="text-rose-400 text-[10px] truncate max-w-[40%]" title={j.error}>
-                    {j.error.slice(0, 50)}
+                  <span className="text-rose-400 text-[10px] truncate max-w-[30%]" title={j.error}>
+                    {j.error.slice(0, 40)}
                   </span>
                 ) : null}
+                {(j.status === "running" || j.status === "idle") && j.taskId && (
+                  <button
+                    onClick={() => checkKie(j.id, j.taskId!, j.family)}
+                    disabled={checking === j.id}
+                    title="Kie'ye sor — bu task gerçekten çalışıyor mu?"
+                    className="shrink-0 inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 disabled:opacity-50"
+                  >
+                    {checking === j.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Search className="h-2.5 w-2.5" />}
+                    Kontrol
+                  </button>
+                )}
+                {(j.status === "running" || j.status === "idle") && (
+                  <button
+                    onClick={() => cancelLocal(j.id)}
+                    title="Bu job'ı yerel olarak iptal et"
+                    className="shrink-0 inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-300"
+                  >
+                    <Ban className="h-2.5 w-2.5" />
+                  </button>
+                )}
                 {j.status === "succeeded" && j.resultUrl && (
                   <a
                     href={j.resultUrl}
