@@ -138,11 +138,24 @@ const ALIAS_MAP: Record<string, string> = {
   "Google Veo 3.1 Fast": "Veo 3.1 Fast",
   "Google Veo 3.1": "Veo 3.1 Fast",
   "Google Veo 3.1 Lite": "Veo 3.1 Fast",
-  "LTX2": "Kling 2.5 Turbo Text-to-Video Pro",
+  "LTX2": "Kling 3.0",
   "Flux Klein 9B": "Flux 2 Pro Text-to-Image",
   "Nano Banana Pro": "Nano Banana 2",
   "Seedream 4.5": "Seedream 4.5 Text-to-Image",
 
+  // Kataloga sigmayan eski Kling/Seedance — yenilerine yonlendir
+  "Kling 2.5 Turbo Text-to-Video Pro": "Kling 3.0",
+  "Kling 2.5 Turbo Image-to-Video Pro": "Kling 2.6 Image-to-Video",
+  "Kling 2.1 Master Text-to-Video": "Kling 3.0",
+  "Kling 2.1 Master Image-to-Video": "Kling 2.6 Image-to-Video",
+  "Kling 2.1 Pro": "Kling 3.0",
+  "Kling 2.1 Standard": "Kling 2.6 Text-to-Video",
+  "Seedance 1.5 Pro": "Seedance 2",
+  "Seedance V1 Pro Text-to-Video": "Seedance 2",
+  "Seedance V1 Pro Image-to-Video": "Seedance 2",
+  "Seedance V1 Pro Fast Image-to-Video": "Seedance 2 Fast",
+  "Seedance V1 Lite Text-to-Video": "Seedance 2 Fast",
+  "Seedance V1 Lite Image-to-Video": "Seedance 2 Fast",
 };
 
 export function getMapping(displayName: string): ModelMapping {

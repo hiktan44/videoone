@@ -120,33 +120,20 @@ export const KIE_CATALOG: KieModelEntry[] = [
   { display: "Grok Imagine Upscale", family: "jobs", modelId: "grok-imagine/upscale", category: "video-upscale", notes: "task_id input gerektirir" },
   { display: "Grok Imagine Extend", family: "jobs", modelId: "grok-imagine/extend", category: "video-extend", notes: "task_id input gerektirir" },
 
-  // --- VIDEO: Kling ---
+  // --- VIDEO: Kling — sadece 2.6 ve 3.0 (2026 modelleri) ---
   { display: "Kling 2.6 Text-to-Video", family: "jobs", modelId: "kling-2.6/text-to-video", category: "video" },
   { display: "Kling 2.6 Image-to-Video", family: "jobs", modelId: "kling-2.6/image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  { display: "Kling 2.5 Turbo Image-to-Video Pro", family: "jobs", modelId: "kling/v2-5-turbo-image-to-video-pro", category: "image-to-video", notes: "image input gerektirir" },
-  { display: "Kling 2.5 Turbo Text-to-Video Pro", family: "jobs", modelId: "kling/v2-5-turbo-text-to-video-pro", category: "video" },
-  { display: "Kling AI Avatar Standard", family: "jobs", modelId: "kling/ai-avatar-standard", category: "lipsync", notes: "image + audio input gerektirir" },
-  { display: "Kling AI Avatar Pro", family: "jobs", modelId: "kling/ai-avatar-pro", category: "lipsync", notes: "image + audio input gerektirir" },
-  { display: "Kling 2.1 Master Image-to-Video", family: "jobs", modelId: "kling/v2-1-master-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  { display: "Kling 2.1 Master Text-to-Video", family: "jobs", modelId: "kling/v2-1-master-text-to-video", category: "video" },
-  { display: "Kling 2.1 Pro", family: "jobs", modelId: "kling/v2-1-pro", category: "video" },
-  { display: "Kling 2.1 Standard", family: "jobs", modelId: "kling/v2-1-standard", category: "video" },
   { display: "Kling 2.6 Motion Control", family: "jobs", modelId: "kling-2.6/motion-control", category: "image-to-video", notes: "motion control video gerektirir" },
   { display: "Kling 3.0 Motion Control", family: "jobs", modelId: "kling-3.0/motion-control", category: "image-to-video", notes: "motion control video gerektirir" },
   // Kling 3.0: kling-3.0/video modelId + sound:true REQUIRED — kie.ts'te handle ediliyor
   { display: "Kling 3.0", family: "jobs", modelId: "kling-3.0", category: "video" },
   { display: "Kling 3.0 Video", family: "jobs", modelId: "kling-3.0/video", category: "video-edit", notes: "video input gerektirir" },
+  { display: "Kling AI Avatar Standard", family: "jobs", modelId: "kling/ai-avatar-standard", category: "lipsync", notes: "image + audio input gerektirir" },
+  { display: "Kling AI Avatar Pro", family: "jobs", modelId: "kling/ai-avatar-pro", category: "lipsync", notes: "image + audio input gerektirir" },
 
-  // --- VIDEO: ByteDance / Seedance ---
+  // --- VIDEO: ByteDance / Seedance — sadece 2.x (2026 modelleri) ---
   { display: "Seedance 2", family: "jobs", modelId: "bytedance/seedance-2", category: "video" },
   { display: "Seedance 2 Fast", family: "jobs", modelId: "bytedance/seedance-2-fast", category: "video" },
-  // Seedance 1.5 Pro: duration enum "8" veya "12" — kie.ts'te handle ediliyor
-  { display: "Seedance 1.5 Pro", family: "jobs", modelId: "bytedance/seedance-1.5-pro", category: "video" },
-  { display: "Seedance V1 Pro Fast Image-to-Video", family: "jobs", modelId: "bytedance/v1-pro-fast-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  { display: "Seedance V1 Pro Image-to-Video", family: "jobs", modelId: "bytedance/v1-pro-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  { display: "Seedance V1 Pro Text-to-Video", family: "jobs", modelId: "bytedance/v1-pro-text-to-video", category: "video" },
-  { display: "Seedance V1 Lite Image-to-Video", family: "jobs", modelId: "bytedance/v1-lite-image-to-video", category: "image-to-video", notes: "image input gerektirir" },
-  { display: "Seedance V1 Lite Text-to-Video", family: "jobs", modelId: "bytedance/v1-lite-text-to-video", category: "video" },
 
   // --- VIDEO: Hailuo ---
   { display: "Hailuo 2.3 Image-to-Video Pro", family: "jobs", modelId: "hailuo/2-3-image-to-video-pro", category: "image-to-video", notes: "image input gerektirir" },
