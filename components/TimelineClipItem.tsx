@@ -4,9 +4,32 @@ import { useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { Scissors } from "lucide-react";
+import { Scissors, Trash2, Upload, RefreshCw } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { TimelineClip } from "@/lib/mocks";
+
+// Dosyayı R2'ye yükleyip URL döner. Klip replace/upload için kullanılır.
+async function uploadToR2(file: File, kind: "video" | "audio" | "image"): Promise<string | null> {
+  try {
+    const presignKind = kind === "image" ? "image" : kind === "audio" ? "audio" : "video";
+    const r = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: presignKind, filename: file.name, contentType: file.type, sizeBytes: file.size }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.uploadUrl) {
+      alert(d.error || "Yükleme başlatılamadı");
+      return null;
+    }
+    const put = await fetch(d.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+    if (!put.ok) { alert("R2 PUT hatası"); return null; }
+    return d.publicUrl;
+  } catch (e) {
+    alert(e instanceof Error ? e.message : "Yükleme hatası");
+    return null;
+  }
+}
 
 type Props = {
   clip: TimelineClip;
@@ -24,6 +47,8 @@ export function TimelineClipItem({ clip, pixelsPerSecond, trackHeight }: Props) 
   const setSelectedClip = useStore((s) => s.setSelectedClip);
   const resizeClip = useStore((s) => s.resizeClip);
   const splitClip = useStore((s) => s.splitClip);
+  const removeClip = useStore((s) => s.removeClip);
+  const updateClip = useStore((s) => (s as any).updateClip);
   const playhead = useStore((s) => s.playhead);
 
   const isSelected = selectedClipId === clip.id;
@@ -32,6 +57,29 @@ export function TimelineClipItem({ clip, pixelsPerSecond, trackHeight }: Props) 
   const startDurRef = useRef(clip.duration);
   const [editingDuration, setEditingDuration] = useState(false);
   const [draftValue, setDraftValue] = useState(clip.duration.toFixed(1));
+  const [uploading, setUploading] = useState(false);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReplace = async (file: File) => {
+    setUploading(true);
+    try {
+      const isAudio = clip.trackId === "audio";
+      const isVid = !!file.type.startsWith("video/");
+      const isImg = !!file.type.startsWith("image/");
+      const kind = isAudio ? "audio" : isVid ? "video" : isImg ? "image" : "video";
+      const url = await uploadToR2(file, kind);
+      if (!url) return;
+      // Mevcut klibin sourceUrl'ini değiştir, süreyi koru
+      if (typeof updateClip === "function") {
+        updateClip(clip.id, { sourceUrl: url, label: file.name.slice(0, 40) });
+      } else {
+        // updateClip yoksa sil + ekle (fallback) — store'a göre olmayabilir
+        useStore.setState((s) => ({
+          clips: s.clips.map((c) => (c.id === clip.id ? { ...c, sourceUrl: url, label: file.name.slice(0, 40) } : c)),
+        }));
+      }
+    } finally { setUploading(false); }
+  };
 
   const {
     attributes,
@@ -120,6 +168,57 @@ export function TimelineClipItem({ clip, pixelsPerSecond, trackHeight }: Props) 
       {/* Etiket */}
       <div className="absolute inset-x-0 bottom-0 px-1.5 py-0.5 text-[10px] text-white bg-black/50 truncate">
         {clip.text ?? clip.label}
+      </div>
+
+      {/* Sol üst: Replace + Delete butonları (hover'da veya seçiliyse) */}
+      <div
+        className={clsx(
+          "absolute top-1 left-1 z-30 flex items-center gap-1 transition-opacity",
+          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        )}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
+        <input
+          ref={replaceInputRef}
+          type="file"
+          accept={
+            clip.trackId === "audio"
+              ? "audio/*"
+              : clip.trackId === "subtitle"
+              ? "*/*"
+              : "video/*,image/*"
+          }
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleReplace(f);
+            (e.target as HTMLInputElement).value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => replaceInputRef.current?.click()}
+          title="Bu klibi başka medya ile değiştir"
+          disabled={uploading}
+          className="h-5 px-1.5 rounded bg-black/70 hover:bg-cyan-500 text-white text-[10px] font-semibold flex items-center gap-1 transition-colors disabled:opacity-50"
+        >
+          {uploading ? <Upload className="w-3 h-3 animate-pulse" /> : <RefreshCw className="w-3 h-3" />}
+          Değiştir
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(`"${clip.label}" silinsin mi? Sonraki klipler sola kayar.`)) {
+              removeClip(clip.id);
+            }
+          }}
+          title="Klibi sil (sonrakiler sola kaydırılır)"
+          className="h-5 w-5 rounded bg-black/70 hover:bg-rose-500 text-white flex items-center justify-center transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
       </div>
 
       {/* Süre rozeti (sağ üst, hover'da görünür / her zaman seçiliyse) */}
