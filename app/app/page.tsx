@@ -17,7 +17,9 @@ import {
   deleteProject,
 } from "@/lib/persistence";
 import { makeSampleProject, type Project } from "@/lib/mocks";
-import { ArrowRight, Sparkles, Zap, Trophy, Plus } from "lucide-react";
+import { BUILTIN_TEMPLATES, templateToProject, type BuiltinTemplate } from "@/lib/builtin-templates";
+import { RecentGenerations } from "@/components/RecentGenerations";
+import { ArrowRight, Sparkles, Zap, Trophy, Plus, Play } from "lucide-react";
 import clsx from "clsx";
 
 const tiers = [
@@ -67,10 +69,40 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"recent" | "templates">("recent");
   const [mounted, setMounted] = useState(false);
 
-  const refreshProjects = useCallback(() => {
-    const list = withDisplayLabels(loadAllProjects());
-    list.sort((a, b) => b.updatedAt - a.updatedAt);
-    setProjects(list);
+  const refreshProjects = useCallback(async () => {
+    // Önce LS'den hızlıca göster (ilk render için)
+    const local = withDisplayLabels(loadAllProjects());
+    local.sort((a, b) => b.updatedAt - a.updatedAt);
+    setProjects(local);
+    // Sonra DB'den çek ve birleştir (DB > LS — en güncel hali)
+    try {
+      const r = await fetch("/api/projects");
+      if (r.ok) {
+        const data = await r.json();
+        const dbProjects: Project[] = (data.projects || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          gradient: p.gradient,
+          createdAt: new Date(p.createdAt).getTime(),
+          updatedAt: new Date(p.updatedAt).getTime(),
+          clips: p.clips || [],
+          characters: [],
+          chatMessages: [],
+          mediaItems: [],
+          settings: p.settings || {},
+          thumbnailUrl: p.thumbnailUrl,
+        }));
+        // Local + DB merge (DB id'leri öncelikli)
+        const dbIds = new Set(dbProjects.map((p) => p.id));
+        const merged = [
+          ...dbProjects,
+          ...local.filter((p) => !dbIds.has(p.id)),
+        ];
+        const labeled = withDisplayLabels(merged);
+        labeled.sort((a, b) => b.updatedAt - a.updatedAt);
+        setProjects(labeled);
+      }
+    } catch {}
   }, [setProjects]);
 
   useEffect(() => {
@@ -79,6 +111,28 @@ export default function HomePage() {
     refreshProjects();
     setMounted(true);
   }, [isSignedIn, refreshProjects]);
+
+  const handleUseTemplate = useCallback(
+    async (tpl: BuiltinTemplate) => {
+      const base = templateToProject(tpl);
+      const p: Project = { ...base, id: `tpl-${Date.now()}` };
+      try {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: p.name, gradient: p.gradient, settings: p.settings }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.project?.id) p.id = data.project.id;
+        }
+      } catch {}
+      upsertProject(p);
+      refreshProjects();
+      router.push(`/editor/${p.id}`);
+    },
+    [router, refreshProjects]
+  );
 
   const handleNewProject = useCallback(async () => {
     const p = makeSampleProject("İsimsiz Vibe");
@@ -154,6 +208,9 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
+
+            {/* Son Üretimler — kullanıcının başarılı job'ları */}
+            <RecentGenerations limit={8} />
           </div>
 
           <div className="relative max-w-5xl mx-auto px-8 pb-16">
@@ -197,20 +254,56 @@ export default function HomePage() {
               </a>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-4">
-              {mounted && projects.length === 0 && (
-                <div className="col-span-full text-center py-12 text-ink-400 text-sm">
-                  Henüz proje yok. Yukarıdaki <span className="text-amber-300 font-medium">Yeni Proje</span> butonuyla başlayın.
-                </div>
-              )}
-              {projects.map((p: Project) => (
-                <ProjectCard
-                  key={p.id}
-                  project={p}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+            {activeTab === "recent" ? (
+              <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-4">
+                {mounted && projects.length === 0 && (
+                  <div className="col-span-full text-center py-12 text-ink-400 text-sm">
+                    Henüz proje yok. Yukarıdaki <span className="text-amber-300 font-medium">Yeni Proje</span> butonuyla başlayın
+                    veya <span className="text-amber-300 font-medium">Genel Şablonlar</span>'dan birini seçin.
+                  </div>
+                )}
+                {projects.map((p: Project) => (
+                  <ProjectCard
+                    key={p.id}
+                    project={p}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-4">
+                {BUILTIN_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => handleUseTemplate(tpl)}
+                    className="group text-left rounded-2xl border border-zinc-800/80 bg-zinc-900/40 hover:border-purple-500/50 hover:bg-zinc-900/80 transition-all overflow-hidden hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-1"
+                  >
+                    <div className={clsx("aspect-[16/10] bg-gradient-to-br relative overflow-hidden", tpl.gradient)}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur text-[10px] font-semibold text-white">
+                        {tpl.category}
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <div className="text-white text-base font-bold drop-shadow-lg">{tpl.name}</div>
+                        <div className="text-white/80 text-[11px] drop-shadow flex items-center gap-2">
+                          <span>{tpl.duration} sn</span>
+                          <span>·</span>
+                          <span>{tpl.aspectRatio}</span>
+                        </div>
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="h-14 w-14 rounded-full bg-white/95 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Play className="h-6 w-6 text-purple-700 ml-0.5" fill="currentColor" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <div className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">{tpl.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>

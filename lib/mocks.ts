@@ -101,6 +101,9 @@ export type Project = {
   settings: Settings;
   // Türetilen
   updatedLabel?: string;
+  // Önizleme — son tamamlanan klibin sourceUrl'i (galeri kartlarında gösterilir)
+  previewUrl?: string;
+  thumbnailUrl?: string;
 };
 
 // --- Başlangıç (mock) verileri ---
