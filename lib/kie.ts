@@ -275,7 +275,7 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
     const isGrok = modelId.startsWith("grok-imagine/");
     const isSeedream = modelId.startsWith("seedream/") || modelId.startsWith("bytedance/seedream");
     const isSeedance15 = modelId === "bytedance/seedance-1.5-pro";
-    const isKling3 = modelId === "kling-3.0" || modelId === "kling-3.0/video";
+    const isKling3 = modelId.startsWith("kling-3.0");
 
     if (isSora2) {
       // Sora 2: aspect_ratio = "landscape"|"portrait" (1:1 desteklenmez), n_frames "10"
@@ -289,8 +289,8 @@ export async function createTask(input: CreateInput): Promise<KieTask> {
     } else if (isGrok) {
       // Grok Imagine: aspect_ratio ve duration gonderme (range validation)
     } else if (isKling3) {
-      // Kling 3.0: kling-3.0/video modelId, sound REQUIRED, mode "std"/"pro"
-      modelId = "kling-3.0/video"; // her durumda /video kullan
+      // Kling 3.0: modelId catalog'tan gelir (kling-3.0/text-to-video etc.)
+      // Sadece sound:true ve mode:"std" gerekli — modelId'yi DEĞİŞTİRME
       inputBody.aspect_ratio = input.aspect_ratio || "16:9";
       inputBody.duration = String(input.duration || 5);
       inputBody.mode = "std";

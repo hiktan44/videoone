@@ -125,8 +125,9 @@ export const KIE_CATALOG: KieModelEntry[] = [
   { display: "Kling 2.6 Image-to-Video", family: "jobs", modelId: "kling-2.6/image-to-video", category: "image-to-video", notes: "image input gerektirir" },
   { display: "Kling 2.6 Motion Control", family: "jobs", modelId: "kling-2.6/motion-control", category: "image-to-video", notes: "motion control video gerektirir" },
   { display: "Kling 3.0 Motion Control", family: "jobs", modelId: "kling-3.0/motion-control", category: "image-to-video", notes: "motion control video gerektirir" },
-  // Kling 3.0: kling-3.0/video modelId + sound:true REQUIRED — kie.ts'te handle ediliyor
-  { display: "Kling 3.0", family: "jobs", modelId: "kling-3.0", category: "video" },
+  // Kling 3.0 — Kie kataloğunda 2.6 deseni (kling-X.X/text-to-video)
+  { display: "Kling 3.0", family: "jobs", modelId: "kling-3.0/text-to-video", category: "video" },
+  { display: "Kling 3.0 Image-to-Video", family: "jobs", modelId: "kling-3.0/image-to-video", category: "image-to-video", notes: "image input gerektirir" },
   { display: "Kling 3.0 Video", family: "jobs", modelId: "kling-3.0/video", category: "video-edit", notes: "video input gerektirir" },
   { display: "Kling AI Avatar Standard", family: "jobs", modelId: "kling/ai-avatar-standard", category: "lipsync", notes: "image + audio input gerektirir" },
   { display: "Kling AI Avatar Pro", family: "jobs", modelId: "kling/ai-avatar-pro", category: "lipsync", notes: "image + audio input gerektirir" },
